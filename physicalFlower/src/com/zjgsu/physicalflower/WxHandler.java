@@ -75,15 +75,15 @@ public class WxHandler {
 					userBasicInfo.put("province", rs.getString("province"));
 					userBasicInfo.put("city", rs.getString("city"));
 					this.res.put("userBasicInfo", userBasicInfo);
-					this.res.put("code", 0);
+					this.res.put("errcode", 1);
 					this.res.put("msg", "user information is supplemented");
 
 //					写入session以保持登录状态
-					this.session.setAttribute("name", rs.getString("name"));
-					this.session.setAttribute("telphone", rs.getString("telphone"));
+//					this.session.setAttribute("userName", rs.getString("userName"));
+//					this.session.setAttribute("telephoneNumber", rs.getString("telephoneNumber"));
 
 				} else {
-					this.res.put("Code", 4001);
+					this.res.put("errCode", 2);
 					this.res.put("msg", "User information needs to be supplemented");
 				}
 
@@ -164,57 +164,11 @@ public class WxHandler {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
-//	    String openid = this.session.getAttribute("openid").toString();
-//		String country = this.Req.getString("country");
-//		String provience = this.Req.getString("provience");
-//		String city = this.Req.getString("city");
-//		String nickname = this.Req.getString("nickname");
-//		int gender = this.Req.getInt("gender");
-//		int statues = 1;
-//		long gmtCreate = System.currentTimeMillis();
-//
-//		String sql = "Select * FROM pf_user WHERE openid=?;";
-//		this.sqlmgr.prepare(sql);
-//		try {
-//			sqlmgr.preparedStmt.setString(1, openid);
-//
-//			ResultSet rs;
-//			rs = sqlmgr.preparedStmt.executeQuery();
-//
-//			if (rs.next()) {
-//				HashMap<Object, Object> userBasicInfo = new HashMap<>();
-//				userBasicInfo.put("openid", openid);
-//				userBasicInfo.put("tag", this.tag);
-//				userBasicInfo.put("gmtCreate", rs.getInt("gmtCreate"));
-//				userBasicInfo.put("Name", rs.getString("name"));
-//				userBasicInfo.put("telphone", rs.getString("telphone"));
-//				userBasicInfo.put("nickname", rs.getString("nickname"));
-//				userBasicInfo.put("gender", rs.getInt("gender"));
-//				userBasicInfo.put("statues", rs.getInt("statues"));
-//				this.res.put("userBasicInfo", userBasicInfo);
-//				this.res.put("errcode", 1);
-//				this.res.put("msg", "User already exists.");
-//				}else {
-//					this.sqlmgr = new SQLManager();
-//					sql = "insert into pf_user (openid,nickname，country,provience,city,gender,statues) values (?,?, ?, ?, ?,?);";
-//					this.sqlmgr.prepare(sql);
-//						this.sqlmgr.preparedStmt.setString(1, openid);
-//						this.sqlmgr.preparedStmt.setString(2, nickname);
-//						this.sqlmgr.preparedStmt.setString(3, country);
-//						this.sqlmgr.preparedStmt.setString(4, provience);
-//						this.sqlmgr.preparedStmt.setString(5, city);
-//						this.sqlmgr.preparedStmt.setInt(6, gender);
-//						this.sqlmgr.preparedStmt.setInt(7, statues);
-//						
-//						this.sqlmgr.preparedStmt.execute();
-//						this.res.put("errcode", 0);
-//						this.res.put("msg", "successfully.");
-//				}
-//		} catch (SQLException e) {
-//			// TODO 自动生成的 catch 块
-//			e.printStackTrace();
-//		}
+
 		this.out.println(new JSONObject(this.res).toString(2));
 	}
 
+	public void test() {
+		this.out.print("yse");
+	}
 }
