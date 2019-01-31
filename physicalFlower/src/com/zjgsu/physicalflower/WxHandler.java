@@ -75,7 +75,7 @@ public class WxHandler {
 					userBasicInfo.put("province", rs.getString("province"));
 					userBasicInfo.put("city", rs.getString("city"));
 					this.res.put("userBasicInfo", userBasicInfo);
-					this.res.put("errcode", 1);
+					this.res.put("code", 0);
 					this.res.put("msg", "user information is supplemented");
 
 //					写入session以保持登录状态
@@ -83,7 +83,7 @@ public class WxHandler {
 //					this.session.setAttribute("telephoneNumber", rs.getString("telephoneNumber"));
 
 				} else {
-					this.res.put("errCode", 2);
+					this.res.put("Code", 1);
 					this.res.put("msg", "User information needs to be supplemented");
 				}
 
