@@ -22,7 +22,7 @@ public class Gateway extends HttpServlet {
 	 * @param out PrintWriter
 	 * @param pf  平台
 	 */
-	public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+	public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException,IllegalArgumentException {
 
 		request.setCharacterEncoding("UTF-8");
 		response.setCharacterEncoding("UTF-8");
@@ -46,8 +46,8 @@ public class Gateway extends HttpServlet {
 			case "updateInfo":
 				wxhdr.updateInfo();
 				break;
-			case"test":
-				wxhdr.test();
+			case"delUser":
+				wxhdr.delUser();
 			}
 
 		} else if (pf.equals("dp")) {
