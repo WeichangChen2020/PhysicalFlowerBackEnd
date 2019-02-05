@@ -66,6 +66,7 @@ public class WxHandler {
 				ResultSet rs = sqlmgr.preparedStmt.executeQuery();
 				if (rs.next()) {
 					HashMap<Object, Object> userBasicInfo = new HashMap<>();
+					userBasicInfo.put("idUser", rs.getInt("idUser"));
 					userBasicInfo.put("openid", openid);
 					userBasicInfo.put("telphone", rs.getString("telphone"));
 					userBasicInfo.put("name", rs.getString("name"));
@@ -78,7 +79,7 @@ public class WxHandler {
 					this.res.put("msg", "user information is supplemented");
 
 //					写入session以保持登录状态
-//					this.session.setAttribute("userName", rs.getString("userName"));
+					this.session.setAttribute("idUser", rs.getString("idUser"));
 //					this.session.setAttribute("telephoneNumber", rs.getString("telephoneNumber"));
 
 				} else {
@@ -94,7 +95,6 @@ public class WxHandler {
 			this.res.put("errCode", 4002);
 			this.res.put("msg", "Login failed.");
 		}
-
 		this.out.println(new JSONObject(this.res).toString(2));
 
 	}
@@ -184,6 +184,8 @@ public class WxHandler {
 		int idCourse = this.Req.getInt("idCourse");
 
 		String sql = "update pf_courseAdd set status = ? where idUser = ? and idCourse = ?;";
+		this.sqlmgr = new SQLManager();
+		this.sqlmgr.prepare(sql);
 		try {
 			this.sqlmgr.preparedStmt.setInt(1, 0);
 			this.sqlmgr.preparedStmt.setInt(2, idUser);
@@ -203,48 +205,62 @@ public class WxHandler {
 	 * @author Mizuki 将某个学生添加到某个课程中
 	 * @param idCourse 课程id
 	 */
-	public void addUser() {
+	public void addCourse() {
 		if (this.session.getAttribute("openid") == null) {
 			this.res.put("errCode", 4002);
 			this.res.put("msg", "Login required.");
 			this.out.println(new JSONObject(this.res).toString(2));
 			return;
 		} else {
-			String openid = this.session.getAttribute("openid").toString();
 			int idCourse = this.Req.getInt("idCourse");
-
-			String sql = "select idUser from pf_user where openid = ?;";
-			this.sqlmgr = new SQLManager();
-			this.sqlmgr.prepare(sql);
+			int idUser = Integer.parseInt(this.session.getAttribute("idUser").toString());
 			long totalMilliSeconds = System.currentTimeMillis();
 			long totalSeconds = totalMilliSeconds / 1000;
+
+			String sql = "select courseName from pf_course where idCourse = ?;";
+			this.sqlmgr = new SQLManager();
+			this.sqlmgr.prepare(sql);
 			try {
-				this.sqlmgr.preparedStmt.setString(1, openid);
-
-				ResultSet rs = sqlmgr.preparedStmt.executeQuery();
-
-				int idUser = rs.getInt("idUser");
-				sql = "select * from pf_course where idUser = ?;";
-				this.sqlmgr.preparedStmt.setInt(1, idUser);
-				rs = sqlmgr.preparedStmt.executeQuery();
-
+				this.sqlmgr.preparedStmt.setInt(1, idCourse);
+				ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
 				if (rs.next()) {
-					sql = "update pf_courseAdd set status = ?, gmtModify = ? where idUser = ?;";
-					this.sqlmgr.preparedStmt.setInt(1, 1);
-					this.sqlmgr.preparedStmt.setLong(2, totalSeconds);
-					this.sqlmgr.preparedStmt.setInt(3, idUser);
-					this.sqlmgr.preparedStmt.execute();
-					this.res.put("errCode", 1);
-					this.res.put("msg", "update success!");
+					sql = "select status from pf_courseAdd where idCourse = ? and idUser = ?;";
+					this.sqlmgr.prepare(sql);
+					this.sqlmgr.preparedStmt.setInt(1, idCourse);
+					this.sqlmgr.preparedStmt.setInt(2, idUser);
+					rs = this.sqlmgr.preparedStmt.executeQuery();
+					if (rs.next()) {
+						if (rs.getInt("status") == 0) {
+							sql = "update pf_courseAdd set status = ?, gmtModify = ? where idCourse = ? and idUser = ?;";
+							this.sqlmgr.prepare(sql);
+							this.sqlmgr.preparedStmt.setInt(1, 1);
+							this.sqlmgr.preparedStmt.setLong(2, totalSeconds);
+							this.sqlmgr.preparedStmt.setInt(3, idCourse);
+							this.sqlmgr.preparedStmt.setInt(4, idUser);
+
+							this.sqlmgr.preparedStmt.execute();
+							this.res.put("errCode", 0);
+							this.res.put("msg", "add(update) success!");
+						} else {
+							this.res.put("errCode", 4001);
+							this.res.put("msg", "user has already exit!");
+						}
+					} else {
+						sql = "insert into pf_courseAdd (idUser, idCourse, status, gmtCreate) values(?, ?, ?, ?);";
+						this.sqlmgr.prepare(sql);
+						this.sqlmgr.preparedStmt.setInt(1, idUser);
+						this.sqlmgr.preparedStmt.setInt(2, idCourse);
+						this.sqlmgr.preparedStmt.setInt(3, 1);
+						this.sqlmgr.preparedStmt.setLong(4, totalSeconds);
+
+						this.sqlmgr.preparedStmt.execute();
+						this.res.put("errCode", 1);
+						this.res.put("msg", "add(insert) success!");
+					}
+
 				} else {
-					sql = "insert into pf_courseAdd (idUser, idCourse, status, gmtCreate) values (?, ?, ?, ?);";
-					this.sqlmgr.preparedStmt.setInt(1, idUser);
-					this.sqlmgr.preparedStmt.setInt(2, idCourse);
-					this.sqlmgr.preparedStmt.setInt(3, 1);
-					this.sqlmgr.preparedStmt.setLong(4, totalSeconds);
-					this.sqlmgr.preparedStmt.execute(sql);
-					this.res.put("errCode", 0);
-					this.res.put("msg", "add success!");
+					this.res.put("errCode", 4003);
+					this.res.put("msg", "Course create required!");
 				}
 			} catch (SQLException e) {
 				// TODO 自动生成的 catch 块
@@ -256,8 +272,63 @@ public class WxHandler {
 
 	/**
 	 * @author Mizuki
-	 * @param word    问题描述
-	 * @param picture 问题截图的base64编码
+	 * @param questionSet
+	 * @param courseName
+	 */
+	public void courseCreate() {
+		String courseName = this.Req.getString("courseName");
+		int idCreater = Integer.parseInt(this.session.getAttribute("idUser").toString());
+		int questionSet = this.Req.getInt("questionSet");
+		long totalMilliSeconds = System.currentTimeMillis();
+		long totalSeconds = totalMilliSeconds / 1000;
+
+		String sql = "select * from pf_course where courseName = ?;";
+		this.sqlmgr = new SQLManager();
+		this.sqlmgr.prepare(sql);
+		try {
+			this.sqlmgr.preparedStmt.setString(1, courseName);
+			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
+			if (rs.next()) {
+				if (rs.getInt("status") == 1) {
+					this.res.put("errCode", 4002);
+					this.res.put("msg", "Sorry,the course has already exists!");
+				} else {
+					sql = "update pf_course set status = ?, gmtModify = ?, idCreater = ? where courseName = ?;";
+					this.sqlmgr.prepare(sql);
+					this.sqlmgr.preparedStmt.setInt(1, 1);
+					this.sqlmgr.preparedStmt.setLong(2, totalSeconds);
+					this.sqlmgr.preparedStmt.setInt(3, idCreater);
+					this.sqlmgr.preparedStmt.setString(4, courseName);
+					this.sqlmgr.preparedStmt.execute();
+
+					this.res.put("errCode", 0);
+					this.res.put("msg", "create(update) success!");
+				}
+
+			} else {
+				sql = "insert into pf_course (idCreater, courseName, questionSet, status, gmtCreate) values(?, ?, ?, ?, ?);";
+				this.sqlmgr.prepare(sql);
+				this.sqlmgr.preparedStmt.setInt(1, idCreater);
+				this.sqlmgr.preparedStmt.setString(2, courseName);
+				this.sqlmgr.preparedStmt.setInt(3, questionSet);
+				this.sqlmgr.preparedStmt.setInt(4, 1);
+				this.sqlmgr.preparedStmt.setLong(5, totalSeconds);
+				this.sqlmgr.preparedStmt.execute();
+
+				this.res.put("errCode", 1);
+				this.res.put("msg", "create(insert) success!");
+			}
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+		}
+		this.out.print(new JSONObject(this.res).toString(2));
+	}
+
+	/**
+	 * @author Mizuki
+	 * @param question 问题描述
+	 * @param picture  问题截图的base64编码
 	 */
 	public void queReport() {
 		if (this.session.getAttribute("openid") == null) {
@@ -267,30 +338,38 @@ public class WxHandler {
 			return;
 		} else {
 			String question = this.Req.getString("question");
-			String[] picture = this.Req.getNames("picture");
+			String picture0 = this.Req.getString("picture0");
+			String picture1 = this.Req.getString("picture1");
+			String picture2 = this.Req.getString("picture2");
+
 			String openid = this.session.getAttribute("openid").toString();
-			long totalMilliSeconds = System.currentTimeMillis();
-			long totalSeconds = totalMilliSeconds / 1000;
 
 			String sql = "select idUser from pf_user where openid = ?;";
 			this.sqlmgr = new SQLManager();
 			this.sqlmgr.prepare(sql);
 			try {
+				long totalMilliSeconds = System.currentTimeMillis();
+				long totalSeconds = totalMilliSeconds / 1000;
+
+				this.sqlmgr.prepare(sql);
 				this.sqlmgr.preparedStmt.setString(1, openid);
-				ResultSet rs = sqlmgr.preparedStmt.executeQuery();
-				int idUser = rs.getInt("idUser");
+				ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
+				if (rs.next()) {
+					int idUser = rs.getInt("idUser");
 
-				sql = "insert into pf_queReport (idUser, question, picture[0], picture[1], picture[2], gmtCreate) values (?, ?, ?, ?, ?, ?);";
-				this.sqlmgr.preparedStmt.setInt(1, idUser);
-				this.sqlmgr.preparedStmt.setString(2, question);
-				this.sqlmgr.preparedStmt.setString(3, picture[0]);
-				this.sqlmgr.preparedStmt.setString(4, picture[1]);
-				this.sqlmgr.preparedStmt.setString(5, picture[2]);
-				this.sqlmgr.preparedStmt.setLong(6, totalSeconds);
-				this.sqlmgr.preparedStmt.execute();
+					sql = "insert into pf_queReport (idUser, question, picture0, picture1, picture2, gmtCreate) values (?, ?, ?, ?, ?, ?);";
+					this.sqlmgr.prepare(sql);
+					this.sqlmgr.preparedStmt.setInt(1, idUser);
+					this.sqlmgr.preparedStmt.setString(2, question);
+					this.sqlmgr.preparedStmt.setString(3, picture0);
+					this.sqlmgr.preparedStmt.setString(4, picture1);
+					this.sqlmgr.preparedStmt.setString(5, picture2);
+					this.sqlmgr.preparedStmt.setLong(6, totalSeconds);
+					this.sqlmgr.preparedStmt.execute();
 
-				this.res.put("errCode", 0);
-				this.res.put("msg", "report success!");
+					this.res.put("errCode", 0);
+					this.res.put("msg", "report success!");
+				}
 			} catch (SQLException e) {
 				// TODO 自动生成的 catch 块
 				e.printStackTrace();
@@ -298,4 +377,5 @@ public class WxHandler {
 			this.out.print(new JSONObject(this.res).toString(2));
 		}
 	}
+
 }

@@ -46,8 +46,17 @@ public class Gateway extends HttpServlet {
 			case "updateInfo":
 				wxhdr.updateInfo();
 				break;
+			case"addCourse":
+				wxhdr.addCourse();
 			case"delUser":
 				wxhdr.delUser();
+				break;
+			case"courseCreater":
+				wxhdr.courseCreate();
+				break;
+			case"queReport":
+				wxhdr.queReport();
+				break;
 			}
 
 		} else if (pf.equals("dp")) {
