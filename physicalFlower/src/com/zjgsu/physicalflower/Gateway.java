@@ -22,7 +22,8 @@ public class Gateway extends HttpServlet {
 	 * @param out PrintWriter
 	 * @param pf  平台
 	 */
-	public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException,IllegalArgumentException {
+	public void doPost(HttpServletRequest request, HttpServletResponse response)
+			throws IOException, IllegalArgumentException {
 
 		request.setCharacterEncoding("UTF-8");
 		response.setCharacterEncoding("UTF-8");
@@ -46,19 +47,25 @@ public class Gateway extends HttpServlet {
 			case "updateInfo":
 				wxhdr.updateInfo();
 				break;
-			case"addCourse":
+			case "addCourse":
 				wxhdr.addCourse();
-			case"delUser":
+			case "delUser":
 				wxhdr.delUser();
 				break;
-			case"courseCreate":
+			case "courseCreate":
 				wxhdr.courseCreate();
 				break;
-			case"queReport":
+			case "delCourse":
+				wxhdr.delCourse();
+				break;
+			case "queReport":
 				wxhdr.queReport();
 				break;
-			case"delCourse":
-				wxhdr.delCourse();
+			case"signinCreate":
+				wxhdr.signinCreate();
+				break;
+			case"getSigninList":
+				wxhdr.getSigninList();
 				break;
 			}
 
@@ -68,30 +75,31 @@ public class Gateway extends HttpServlet {
 	}
 
 	/**
-     * 获取POST请求中Body参数
-     * @param request
-     * @return JSONObject
-     */
-    public JSONObject getReq(HttpServletRequest request) {
-        BufferedReader br = null;
-        try {
-            br = new BufferedReader(new InputStreamReader(request.getInputStream(), "UTF-8"));
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        String line = null;
-        StringBuilder sb = new StringBuilder();
-        try {
-            while ((line = br.readLine()) != null) {
-                sb.append(line);
-            }
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        System.out.println(sb.toString());
-        return new JSONObject(sb.toString());
-        
-    }
+	 * 获取POST请求中Body参数
+	 * 
+	 * @param request
+	 * @return JSONObject
+	 */
+	public JSONObject getReq(HttpServletRequest request) {
+		BufferedReader br = null;
+		try {
+			br = new BufferedReader(new InputStreamReader(request.getInputStream(), "UTF-8"));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		String line = null;
+		StringBuilder sb = new StringBuilder();
+		try {
+			while ((line = br.readLine()) != null) {
+				sb.append(line);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println(sb.toString());
+		return new JSONObject(sb.toString());
+
+	}
 }

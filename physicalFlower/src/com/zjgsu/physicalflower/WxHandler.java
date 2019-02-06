@@ -2,9 +2,12 @@ package com.zjgsu.physicalflower;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import javax.servlet.http.HttpSession;
 
@@ -169,6 +172,7 @@ public class WxHandler {
 
 			} catch (SQLException e) {
 				e.printStackTrace();
+				this.res.put("msg", e);
 			}
 			this.out.println(new JSONObject(this.res).toString(2));
 		}
@@ -370,7 +374,7 @@ public class WxHandler {
 						courseBasicInfo.put("courseName", Rs.getString("courseName"));
 						courseBasicInfo.put("questionSet", Rs.getInt("questionSet"));
 						courseBasicInfo.put("gmtCreate", Rs.getLong("gmtCreate"));
-						
+
 						this.res.put("courseBasicInfo", courseBasicInfo);
 						this.res.put("errCode", 1);
 						this.res.put("msg", "create(insert) success!");
@@ -464,5 +468,86 @@ public class WxHandler {
 			this.out.print(new JSONObject(this.res).toString(2));
 		}
 	}
+
+	/**
+	 * @author Mizuki 创建签到
+	 */
+	public void signinCreate() {
+		String signinName = this.Req.getString("signinName");
+		int idCourse = this.Req.getInt("idCourse");
+		String description = " ";
+		if (this.Req.getString("description") != null) {
+			description = this.Req.getString("description");
+		}
+		long gmtStart = this.Req.getLong("gmtStart");
+		long gmtEnd = this.Req.getLong("gmtEnd");
+		BigDecimal latitude = this.Req.getBigDecimal("latitude");
+		BigDecimal longitude = this.Req.getBigDecimal("longitude");
+		int horizontalAccuracy = this.Req.getInt("horizontalAccuracy");
+		int radius = this.Req.getInt("radius");
+		long totalMilliSeconds = System.currentTimeMillis();
+		long totalSeconds = totalMilliSeconds / 1000;
+
+		String sql = "insert into pf_signin (idCourse, signinName, gmtStart, gmtEnd, longitude, latitude, horizontalAccuracy, radius, description, status, gmtCreate) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+		this.sqlmgr = new SQLManager();
+		this.sqlmgr.prepare(sql);
+		try {
+			this.sqlmgr.preparedStmt.setInt(1, idCourse);
+			this.sqlmgr.preparedStmt.setString(2, signinName);
+			this.sqlmgr.preparedStmt.setLong(3, gmtStart);
+			this.sqlmgr.preparedStmt.setLong(4, gmtEnd);
+			this.sqlmgr.preparedStmt.setBigDecimal(5, longitude);
+			this.sqlmgr.preparedStmt.setBigDecimal(6, latitude);
+			this.sqlmgr.preparedStmt.setInt(7, horizontalAccuracy);
+			this.sqlmgr.preparedStmt.setInt(8, radius);
+			this.sqlmgr.preparedStmt.setString(9, description);
+			this.sqlmgr.preparedStmt.setInt(10, 1);
+			this.sqlmgr.preparedStmt.setLong(11, totalSeconds);
+
+			this.sqlmgr.preparedStmt.execute();
+			this.res.put("errCode", 0);
+			this.res.put("msg", "signin create success!");
+
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+		}
+		this.out.print(new JSONObject(this.res).toString(2));
+	}
+	
+	/**
+	 * @author Mizuki
+	 * 获得签到信息
+	 */
+
+	public void getSigninList() {
+		int idCourse = this.Req.getInt("idCourse");
+		int page = this.Req.getInt("page");
+		int num = (page-1)*10;
+		String sql = " select   *   from   pf_signin  where idCourse = ? and status = 1 order by gmtCreate desc limit ?,10;";
+		
+		this.sqlmgr = new SQLManager();
+		this.sqlmgr.prepare(sql);
+		try {
+			this.sqlmgr.preparedStmt.setInt(1, idCourse);
+			this.sqlmgr.preparedStmt.setInt(2, num);
+			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
+			List<HashMap> signinInfo = new ArrayList<HashMap>();
+			while(rs.next()) {
+				HashMap<Object, Object> Info = new HashMap<>();
+				Info.put("idSignin", rs.getInt("idSignin"));
+				Info.put("idCourse", rs.getInt("idCourse"));
+				signinInfo.add(Info);
+			}
+			this.res.put("signinInfo", signinInfo);
+			this.res.put("errCode", 0);
+			this.res.put("msg", "select success!");
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+		}
+		this.out.print(new JSONObject(this.res).toString(2));
+	}
+
 
 }
