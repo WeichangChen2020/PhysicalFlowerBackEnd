@@ -358,9 +358,24 @@ public class WxHandler {
 					this.sqlmgr.preparedStmt.setInt(4, 1);
 					this.sqlmgr.preparedStmt.setLong(5, totalSeconds);
 					this.sqlmgr.preparedStmt.execute();
-					
-					this.res.put("errCode", 1);
-					this.res.put("msg", "create(insert) success!");
+
+					sql = "select * from pf_course where courseName = ?;";
+					this.sqlmgr.prepare(sql);
+					this.sqlmgr.preparedStmt.setString(1, courseName);
+					ResultSet Rs = this.sqlmgr.preparedStmt.executeQuery();
+					if (Rs.next()) {
+						HashMap<Object, Object> courseBasicInfo = new HashMap<>();
+						courseBasicInfo.put("idCourse", Rs.getInt("idCourse"));
+						courseBasicInfo.put("idCreater", Rs.getInt("idCreater"));
+						courseBasicInfo.put("courseName", Rs.getString("courseName"));
+						courseBasicInfo.put("questionSet", Rs.getInt("questionSet"));
+						courseBasicInfo.put("gmtCreate", Rs.getLong("gmtCreate"));
+						
+						this.res.put("courseBasicInfo", courseBasicInfo);
+						this.res.put("errCode", 1);
+						this.res.put("msg", "create(insert) success!");
+					}
+
 				}
 			} catch (SQLException e) {
 				// TODO 自动生成的 catch 块
@@ -368,6 +383,33 @@ public class WxHandler {
 			}
 			this.out.print(new JSONObject(this.res).toString(2));
 		}
+	}
+
+	/**
+	 * @author Mizuki
+	 * @param idCourse
+	 */
+	public void delCourse() {
+		int idCourse = this.Req.getInt("idCourse");
+		String sql = "update pf_course set status = ?, gmtModify = ? where idCourse = ?;";
+		long totalMilliSeconds = System.currentTimeMillis();
+		long totalSeconds = totalMilliSeconds / 1000;
+
+		this.sqlmgr = new SQLManager();
+		this.sqlmgr.prepare(sql);
+		try {
+			this.sqlmgr.preparedStmt.setInt(1, 0);
+			this.sqlmgr.preparedStmt.setLong(2, totalSeconds);
+			this.sqlmgr.preparedStmt.setInt(3, idCourse);
+
+			this.sqlmgr.preparedStmt.execute();
+			this.res.put("errCode", 0);
+			this.res.put("msg", "delete course success!");
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+		}
+		this.out.print(new JSONObject(this.res).toString(2));
 	}
 
 	/**
