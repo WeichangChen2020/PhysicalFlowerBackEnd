@@ -231,6 +231,7 @@ public class WxHandler {
 					rs = this.sqlmgr.preparedStmt.executeQuery();
 					if (rs.next()) {
 						if (rs.getInt("status") == 0) {
+							HashMap<Object, Object> userBasicInfo = new HashMap<>();
 							sql = "update pf_courseAdd set status = ?, gmtModify = ? where idCourse = ? and idUser = ?;";
 							this.sqlmgr.prepare(sql);
 							this.sqlmgr.preparedStmt.setInt(1, 1);
@@ -238,14 +239,29 @@ public class WxHandler {
 							this.sqlmgr.preparedStmt.setInt(3, idCourse);
 							this.sqlmgr.preparedStmt.setInt(4, idUser);
 
-							this.sqlmgr.preparedStmt.execute();
+							ResultSet Rs = this.sqlmgr.preparedStmt.executeQuery();
+
+							userBasicInfo.put("idUser", Rs.getInt("idUser"));
+							userBasicInfo.put("idCourse", Rs.getInt("idCourse"));
+							userBasicInfo.put("gmtCreate", Rs.getLong("gmtCreate"));
+							userBasicInfo.put("gmtModify", Rs.getLong("gmtModify"));
+
+							this.res.put("userBasicInfo", userBasicInfo);
 							this.res.put("errCode", 0);
 							this.res.put("msg", "add(update) success!");
 						} else {
+							HashMap<Object, Object> userBasicInfo = new HashMap<>();
+							userBasicInfo.put("idUser", rs.getInt("idUser"));
+							userBasicInfo.put("idCourse", rs.getInt("idCourse"));
+							userBasicInfo.put("gmtCreate", rs.getLong("gmtCreate"));
+							userBasicInfo.put("gmtModify", rs.getLong("gmtModify"));
+
+							this.res.put("userBasicInfo", userBasicInfo);
 							this.res.put("errCode", 4001);
 							this.res.put("msg", "user has already exit!");
 						}
 					} else {
+						HashMap<Object, Object> userBasicInfo = new HashMap<>();
 						sql = "insert into pf_courseAdd (idUser, idCourse, status, gmtCreate) values(?, ?, ?, ?);";
 						this.sqlmgr.prepare(sql);
 						this.sqlmgr.preparedStmt.setInt(1, idUser);
@@ -253,7 +269,13 @@ public class WxHandler {
 						this.sqlmgr.preparedStmt.setInt(3, 1);
 						this.sqlmgr.preparedStmt.setLong(4, totalSeconds);
 
-						this.sqlmgr.preparedStmt.execute();
+						ResultSet Rs = this.sqlmgr.preparedStmt.executeQuery();
+
+						userBasicInfo.put("idUser", Rs.getInt("idUser"));
+						userBasicInfo.put("idCourse", Rs.getInt("idCourse"));
+						userBasicInfo.put("gmtCreate", Rs.getLong("gmtCreate"));
+
+						this.res.put("userBasicInfo", userBasicInfo);
 						this.res.put("errCode", 1);
 						this.res.put("msg", "add(insert) success!");
 					}
@@ -276,53 +298,76 @@ public class WxHandler {
 	 * @param courseName
 	 */
 	public void courseCreate() {
-		String courseName = this.Req.getString("courseName");
-		int idCreater = Integer.parseInt(this.session.getAttribute("idUser").toString());
-		int questionSet = this.Req.getInt("questionSet");
-		long totalMilliSeconds = System.currentTimeMillis();
-		long totalSeconds = totalMilliSeconds / 1000;
+		if (this.session.getAttribute("openid") == null) {
+			this.res.put("errCode", 4002);
+			this.res.put("msg", "Login required.");
+			this.out.println(new JSONObject(this.res).toString(2));
+			return;
+		} else {
+			String courseName = this.Req.getString("courseName");
+			int idCreater = Integer.parseInt(this.session.getAttribute("idUser").toString());
+			int questionSet = this.Req.getInt("questionSet");
+			long totalMilliSeconds = System.currentTimeMillis();
+			long totalSeconds = totalMilliSeconds / 1000;
 
-		String sql = "select * from pf_course where courseName = ?;";
-		this.sqlmgr = new SQLManager();
-		this.sqlmgr.prepare(sql);
-		try {
-			this.sqlmgr.preparedStmt.setString(1, courseName);
-			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
-			if (rs.next()) {
-				if (rs.getInt("status") == 1) {
-					this.res.put("errCode", 4002);
-					this.res.put("msg", "Sorry,the course has already exists!");
+			String sql = "select * from pf_course where courseName = ?;";
+			this.sqlmgr = new SQLManager();
+			this.sqlmgr.prepare(sql);
+			try {
+				this.sqlmgr.preparedStmt.setString(1, courseName);
+				ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
+				if (rs.next()) {
+					if (rs.getInt("status") == 1) {
+						HashMap<Object, Object> courseBasicInfo = new HashMap<>();
+						courseBasicInfo.put("idCourse", rs.getInt("idCourse"));
+						courseBasicInfo.put("idCreater", rs.getInt("idCreater"));
+						courseBasicInfo.put("courseName", rs.getString("courseName"));
+						courseBasicInfo.put("questionSet", rs.getInt("questionSet"));
+						courseBasicInfo.put("gmtCreate", rs.getLong("gmtCreate"));
+
+						this.res.put("courseBasicInfo", courseBasicInfo);
+						this.res.put("errCode", 4002);
+						this.res.put("msg", "Sorry,the course has already exists!");
+
+					} else {
+						sql = "update pf_course set status = ?, gmtModify = ?, idCreater = ? where courseName = ?;";
+						this.sqlmgr.prepare(sql);
+						this.sqlmgr.preparedStmt.setInt(1, 1);
+						this.sqlmgr.preparedStmt.setLong(2, totalSeconds);
+						this.sqlmgr.preparedStmt.setInt(3, idCreater);
+						this.sqlmgr.preparedStmt.setString(4, courseName);
+						this.sqlmgr.preparedStmt.execute();
+						HashMap<Object, Object> courseBasicInfo = new HashMap<>();
+						courseBasicInfo.put("idCourse", rs.getInt("idCourse"));
+						courseBasicInfo.put("idCreater", rs.getInt("idCreater"));
+						courseBasicInfo.put("courseName", rs.getString("courseName"));
+						courseBasicInfo.put("questionSet", rs.getInt("questionSet"));
+						courseBasicInfo.put("gmtCreate", rs.getLong("gmtCreate"));
+
+						this.res.put("courseBasicInfo", courseBasicInfo);
+						this.res.put("errCode", 0);
+						this.res.put("msg", "create(update) success!");
+					}
+
 				} else {
-					sql = "update pf_course set status = ?, gmtModify = ?, idCreater = ? where courseName = ?;";
+					sql = "insert into pf_course (idCreater, courseName, questionSet, status, gmtCreate) values(?, ?, ?, ?, ?);";
 					this.sqlmgr.prepare(sql);
-					this.sqlmgr.preparedStmt.setInt(1, 1);
-					this.sqlmgr.preparedStmt.setLong(2, totalSeconds);
-					this.sqlmgr.preparedStmt.setInt(3, idCreater);
-					this.sqlmgr.preparedStmt.setString(4, courseName);
+					this.sqlmgr.preparedStmt.setInt(1, idCreater);
+					this.sqlmgr.preparedStmt.setString(2, courseName);
+					this.sqlmgr.preparedStmt.setInt(3, questionSet);
+					this.sqlmgr.preparedStmt.setInt(4, 1);
+					this.sqlmgr.preparedStmt.setLong(5, totalSeconds);
 					this.sqlmgr.preparedStmt.execute();
-
-					this.res.put("errCode", 0);
-					this.res.put("msg", "create(update) success!");
+					
+					this.res.put("errCode", 1);
+					this.res.put("msg", "create(insert) success!");
 				}
-
-			} else {
-				sql = "insert into pf_course (idCreater, courseName, questionSet, status, gmtCreate) values(?, ?, ?, ?, ?);";
-				this.sqlmgr.prepare(sql);
-				this.sqlmgr.preparedStmt.setInt(1, idCreater);
-				this.sqlmgr.preparedStmt.setString(2, courseName);
-				this.sqlmgr.preparedStmt.setInt(3, questionSet);
-				this.sqlmgr.preparedStmt.setInt(4, 1);
-				this.sqlmgr.preparedStmt.setLong(5, totalSeconds);
-				this.sqlmgr.preparedStmt.execute();
-
-				this.res.put("errCode", 1);
-				this.res.put("msg", "create(insert) success!");
+			} catch (SQLException e) {
+				// TODO 自动生成的 catch 块
+				e.printStackTrace();
 			}
-		} catch (SQLException e) {
-			// TODO 自动生成的 catch 块
-			e.printStackTrace();
+			this.out.print(new JSONObject(this.res).toString(2));
 		}
-		this.out.print(new JSONObject(this.res).toString(2));
 	}
 
 	/**

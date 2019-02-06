@@ -51,7 +51,7 @@ public class Gateway extends HttpServlet {
 			case"delUser":
 				wxhdr.delUser();
 				break;
-			case"courseCreater":
+			case"courseCreate":
 				wxhdr.courseCreate();
 				break;
 			case"queReport":
