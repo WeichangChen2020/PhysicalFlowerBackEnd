@@ -686,8 +686,8 @@ public class WxHandler {
 	 */
 	public void doSignin() {
 		int idSignin = this.Req.getInt("idSignin");
-		int idUser = 2;
-//		int idUser = Integer.parseInt(this.session.getAttribute("idUser").toString());
+//		int idUser = 2;
+		int idUser = Integer.parseInt(this.session.getAttribute("idUser").toString());
 		BigDecimal latitude = this.Req.getBigDecimal("latitude");
 		BigDecimal longitude = this.Req.getBigDecimal("longitude");
 		int horizontalAccuracy = this.Req.getInt("horizontalAccuracy");
