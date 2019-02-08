@@ -32,7 +32,7 @@ public class Gateway extends HttpServlet {
 		JSONObject Req = this.getReq(request);
 		PrintWriter out = response.getWriter();
 		HttpSession session = request.getSession();
-
+    
 		String pf = Req.getString("pf");
 		String tag = Req.getString("tag");
 		if (pf.equals("wx")) {
@@ -49,6 +49,7 @@ public class Gateway extends HttpServlet {
 				break;
 			case "addCourse":
 				wxhdr.addCourse();
+				break;
 			case "delUser":
 				wxhdr.delUser();
 				break;
@@ -67,8 +68,17 @@ public class Gateway extends HttpServlet {
 			case"signinCreate":
 				wxhdr.signinCreate();
 				break;
+			case"doSignin":
+				wxhdr.doSignin();
+				break;
 			case"getSigninList":
 				wxhdr.getSigninList();
+				break;
+			case"getCreatecourselist":
+				wxhdr.getCreatecourselist();
+				break;
+			case"getJoincourselist":
+				wxhdr.getJoincourselist();
 				break;
 			}
 

@@ -24,7 +24,7 @@ public class WxHandler {
 	protected HashMap<Object, Object> res;
 	protected String appId = "wx9061828744e52511";
 	protected String appSecret = "f8edd6c9131964c83646a2056eba3700";
-	protected int errCode = 4400;
+	protected int errCode = -1;
 	protected String msg = "init";
 
 	public WxHandler(JSONObject Req, PrintWriter out, HttpSession session) throws IOException {
@@ -64,61 +64,68 @@ public class WxHandler {
 //    		检索数据库，若没有注册信息则要求注册
 //			改为如果信息不完整则要求完善
 			this.sqlmgr = new SQLManager();
-			String sql = "Select * FROM pf_user WHERE openid=?";
+			String sql = "select * from pf_user where openid = ?;";
 			this.sqlmgr.prepare(sql);
 			try {
-				sqlmgr.preparedStmt.setString(1, openid);
-//				查询数据库是否存在该用户
-				ResultSet rs = sqlmgr.preparedStmt.executeQuery();
+				this.sqlmgr.preparedStmt.setString(1, openid);
+
+				ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
 				if (rs.next()) {
-//					如果存在
-					if (rs.getString("name") == null || rs.getString("stunum") == null) {
-//						如果信息不完善（name或stunum为空）
-						errCode = 1;
-						msg = "User information needs to be supplemented";
-					} else {
+					if (rs.getString("name") != null) {
+						// 用户信息已完善，返回给前台
 						HashMap<Object, Object> userBasicInfo = new HashMap<>();
 						userBasicInfo.put("idUser", rs.getInt("idUser"));
-						userBasicInfo.put("openid", openid);
-						userBasicInfo.put("telphone", rs.getString("telphone"));
+						userBasicInfo.put("openid", rs.getString("openid"));
 						userBasicInfo.put("name", rs.getString("name"));
-						userBasicInfo.put("stunum", rs.getString("stunum"));
+						userBasicInfo.put("nickName", rs.getString("nickName"));
+						userBasicInfo.put("gender", rs.getInt("gender"));
 						userBasicInfo.put("country", rs.getString("country"));
 						userBasicInfo.put("province", rs.getString("province"));
 						userBasicInfo.put("city", rs.getString("city"));
-						errCode = 0;
-						msg = "login ok";
+						userBasicInfo.put("avatarUrl", rs.getString("avatarUrl"));
+						userBasicInfo.put("telphone", rs.getString("telphone"));
+						userBasicInfo.put("stunum", rs.getString("stunum"));
+
 						this.res.put("userBasicInfo", userBasicInfo);
+						this.res.put("errCode", 0);
+						this.res.put("msg", "user information is supplement!");
+						this.session.setAttribute("idUser", rs.getInt("idUser"));
+					} else {
+//						 用户openid已写入数据库，但是信息未完善
+						this.res.put("errCode", 1);
+						this.res.put("msg", "user information is need to supplement!");
+						this.session.setAttribute("idUser", rs.getInt("idUser"));
 					}
 
-//					写入session以保持登录状态
-					this.session.setAttribute("idUser", rs.getString("idUser"));
-
 				} else {
-//					如果不存在，则把openid写到数据库（省的把openid写到session）
-//					String sql1 = "Select * FROM pf_user WHERE openid=?";
-					String sql1 = "INSERT INTO pf_user (openid,gmtCreate) VALUES (?,?)";
-					this.sqlmgr.prepare(sql1);
+//					 openid还未写入数据库
+					String Sql = "insert into pf_user (openid, gmtCreate) values (?, ?);";
+					this.sqlmgr.prepare(Sql);
+					this.sqlmgr.preparedStmt = this.sqlmgr.conn.prepareStatement(Sql,
+							this.sqlmgr.stmt.RETURN_GENERATED_KEYS);
 					this.sqlmgr.preparedStmt.setString(1, openid);
 					this.sqlmgr.preparedStmt.setLong(2, System.currentTimeMillis() / 1000);
-//					不知道返回值是啥，应该要写执行失败的判断
-					this.sqlmgr.preparedStmt.execute();
-					errCode = 1;
-					msg = "Register first";
+
+					this.sqlmgr.preparedStmt.executeUpdate();
+					ResultSet Rs = this.sqlmgr.preparedStmt.getGeneratedKeys();
+					if (Rs.next()) {
+						this.res.put("idUser", rs.getInt(1));
+						this.session.setAttribute("idUser", Rs.getInt(1));
+					}
+					this.res.put("errCode", 0);
+					this.res.put("msg", "login(insert) success!");
 				}
-
 			} catch (SQLException e) {
+				// TODO 自动生成的 catch 块
 				e.printStackTrace();
+				this.res.put("msg", e.toString());
 			}
-
 		} else {
+			// 微信登陆失败
 			this.res.put("errCode", 4002);
-			this.res.put("msg", "Login failed.");
+			this.res.put("msg", "login failed!");
 		}
-		this.res.put("errCode", errCode);
-		this.res.put("msg", msg);
 		this.out.println(new JSONObject(this.res).toString(2));
-
 	}
 
 	/**
@@ -143,56 +150,32 @@ public class WxHandler {
 
 //		    	更新原有记录(status置1)
 					this.sqlmgr = new SQLManager();
-					sql = "UPDATE pf_user SET name=?, telphone=?, stunum=?, country=?, province=?, city=?, status=1, gmtModify=? WHERE openid=?";
+					sql = "UPDATE pf_user SET nickName=?, avatarUrl=?, name=?, telphone=?, stunum=?, country=?, province=?, city=?, status=1, gmtModify=? WHERE openid=?";
 					this.sqlmgr.prepare(sql);
-					this.sqlmgr.preparedStmt.setString(1, this.Req.getJSONObject("userBasicInfo").getString("name"));
+					this.sqlmgr.preparedStmt.setString(1,
+							this.Req.getJSONObject("userBasicInfo").getString("nickName"));
 					this.sqlmgr.preparedStmt.setString(2,
+							this.Req.getJSONObject("userBasicInfo").getString("avatarUrl"));
+					this.sqlmgr.preparedStmt.setString(3, this.Req.getJSONObject("userBasicInfo").getString("name"));
+					this.sqlmgr.preparedStmt.setString(4,
 							this.Req.getJSONObject("userBasicInfo").getString("telphone"));
-					this.sqlmgr.preparedStmt.setString(3, this.Req.getJSONObject("userBasicInfo").getString("stunum"));
-					this.sqlmgr.preparedStmt.setString(4, this.Req.getJSONObject("userBasicInfo").getString("country"));
-					this.sqlmgr.preparedStmt.setString(5,
+					this.sqlmgr.preparedStmt.setString(5, this.Req.getJSONObject("userBasicInfo").getString("stunum"));
+					this.sqlmgr.preparedStmt.setString(6, this.Req.getJSONObject("userBasicInfo").getString("country"));
+					this.sqlmgr.preparedStmt.setString(7,
 							this.Req.getJSONObject("userBasicInfo").getString("province"));
-					this.sqlmgr.preparedStmt.setString(6, this.Req.getJSONObject("userBasicInfo").getString("city"));
-					this.sqlmgr.preparedStmt.setLong(7, System.currentTimeMillis() / 1000);
-					this.sqlmgr.preparedStmt.setString(8, this.session.getAttribute("openid").toString());
+					this.sqlmgr.preparedStmt.setString(8, this.Req.getJSONObject("userBasicInfo").getString("city"));
+					this.sqlmgr.preparedStmt.setLong(9, System.currentTimeMillis() / 1000);
+					this.sqlmgr.preparedStmt.setString(10, this.session.getAttribute("openid").toString());
 					this.sqlmgr.preparedStmt.execute();
 
 					this.res.put("userBasicInfo", this.Req.getJSONObject("userBasicInfo"));
 					errCode = 0;
 					msg = "update success";
-				} else {
-//				插入一条记录
-					this.sqlmgr = new SQLManager();
-					long totalMilliSeconds = System.currentTimeMillis();
-					long totalSeconds = totalMilliSeconds / 1000;
-					sql = "INSERT INTO pf_user (openid,name,telphone,status,country,province,city,nickName,gmtCreate,gender,avatarUrl,stunum) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
-					this.sqlmgr.prepare(sql);
-					this.sqlmgr.preparedStmt.setString(1, this.session.getAttribute("openid").toString());
-					this.sqlmgr.preparedStmt.setString(2, this.Req.getJSONObject("userBasicInfo").getString("name"));
-					this.sqlmgr.preparedStmt.setString(3,
-							this.Req.getJSONObject("userBasicInfo").getString("telphone"));
-					this.sqlmgr.preparedStmt.setInt(4, 1);
-					this.sqlmgr.preparedStmt.setString(5, this.Req.getJSONObject("userBasicInfo").getString("country"));
-					this.sqlmgr.preparedStmt.setString(6,
-							this.Req.getJSONObject("userBasicInfo").getString("province"));
-					this.sqlmgr.preparedStmt.setString(7, this.Req.getJSONObject("userBasicInfo").getString("city"));
-					this.sqlmgr.preparedStmt.setString(8,
-							this.Req.getJSONObject("userBasicInfo").getString("nickName"));
-					this.sqlmgr.preparedStmt.setLong(9, totalSeconds);
-					this.sqlmgr.preparedStmt.setInt(10, this.Req.getJSONObject("userBasicInfo").getInt("gender"));
-					this.sqlmgr.preparedStmt.setString(11,
-							this.Req.getJSONObject("userBasicInfo").getString("avatarUrl"));
-					this.sqlmgr.preparedStmt.setString(12, this.Req.getJSONObject("userBasicInfo").getString("stunum"));
-					this.sqlmgr.preparedStmt.execute();
-
-					this.res.put("userBasicInfo", this.Req.getJSONObject("userBasicInfo"));
-					errCode = 1;
-					msg = "insert success!";
 				}
 
 			} catch (SQLException e) {
 				e.printStackTrace();
-				this.res.put("msg", e);
+				this.res.put("msg", e.toString());
 			}
 			this.res.put("errCode", errCode);
 			this.res.put("msg", msg);
@@ -222,6 +205,7 @@ public class WxHandler {
 		} catch (SQLException e) {
 			// TODO 自动生成的 catch 块
 			e.printStackTrace();
+			this.res.put("msg", e.toString());
 		}
 
 		this.out.print(new JSONObject(this.res).toString(2));
@@ -232,7 +216,7 @@ public class WxHandler {
 	 * @param idCourse 课程id
 	 */
 	public void addCourse() {
-		if (this.session.getAttribute("openid") == null) {
+		if (this.session.getAttribute("idUser") == null) {
 			this.res.put("errCode", 4002);
 			this.res.put("msg", "Login required.");
 			this.out.println(new JSONObject(this.res).toString(2));
@@ -250,7 +234,7 @@ public class WxHandler {
 				this.sqlmgr.preparedStmt.setInt(1, idCourse);
 				ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
 				if (rs.next()) {
-					sql = "select status from pf_courseAdd where idCourse = ? and idUser = ?;";
+					sql = "select * from pf_courseAdd where idCourse = ? and idUser = ?;";
 					this.sqlmgr.prepare(sql);
 					this.sqlmgr.preparedStmt.setInt(1, idCourse);
 					this.sqlmgr.preparedStmt.setInt(2, idUser);
@@ -265,14 +249,8 @@ public class WxHandler {
 							this.sqlmgr.preparedStmt.setInt(3, idCourse);
 							this.sqlmgr.preparedStmt.setInt(4, idUser);
 
-							ResultSet Rs = this.sqlmgr.preparedStmt.executeQuery();
+							this.sqlmgr.preparedStmt.execute();
 
-							userBasicInfo.put("idUser", Rs.getInt("idUser"));
-							userBasicInfo.put("idCourse", Rs.getInt("idCourse"));
-							userBasicInfo.put("gmtCreate", Rs.getLong("gmtCreate"));
-							userBasicInfo.put("gmtModify", Rs.getLong("gmtModify"));
-
-							this.res.put("userBasicInfo", userBasicInfo);
 							this.res.put("errCode", 0);
 							this.res.put("msg", "add(update) success!");
 						} else {
@@ -287,7 +265,7 @@ public class WxHandler {
 							this.res.put("msg", "user has already exit!");
 						}
 					} else {
-						HashMap<Object, Object> userBasicInfo = new HashMap<>();
+//						HashMap<Object, Object> userBasicInfo = new HashMap<>();
 						sql = "insert into pf_courseAdd (idUser, idCourse, status, gmtCreate) values(?, ?, ?, ?);";
 						this.sqlmgr.prepare(sql);
 						this.sqlmgr.preparedStmt.setInt(1, idUser);
@@ -295,13 +273,8 @@ public class WxHandler {
 						this.sqlmgr.preparedStmt.setInt(3, 1);
 						this.sqlmgr.preparedStmt.setLong(4, totalSeconds);
 
-						ResultSet Rs = this.sqlmgr.preparedStmt.executeQuery();
+						this.sqlmgr.preparedStmt.execute();
 
-						userBasicInfo.put("idUser", Rs.getInt("idUser"));
-						userBasicInfo.put("idCourse", Rs.getInt("idCourse"));
-						userBasicInfo.put("gmtCreate", Rs.getLong("gmtCreate"));
-
-						this.res.put("userBasicInfo", userBasicInfo);
 						this.res.put("errCode", 1);
 						this.res.put("msg", "add(insert) success!");
 					}
@@ -313,6 +286,7 @@ public class WxHandler {
 			} catch (SQLException e) {
 				// TODO 自动生成的 catch 块
 				e.printStackTrace();
+				this.res.put("msg", e.toString());
 			}
 			this.out.print(new JSONObject(this.res).toString(2));
 		}
@@ -324,7 +298,7 @@ public class WxHandler {
 	 * @param courseName
 	 */
 	public void courseCreate() {
-		if (this.session.getAttribute("openid") == null) {
+		if (this.session.getAttribute("idUser") == null) {
 			this.res.put("errCode", 4002);
 			this.res.put("msg", "Login required.");
 			this.out.println(new JSONObject(this.res).toString(2));
@@ -409,6 +383,7 @@ public class WxHandler {
 				}
 			} catch (SQLException e) {
 				// TODO 自动生成的 catch 块
+				this.res.put("msg", e.toString());
 				e.printStackTrace();
 			}
 			this.out.print(new JSONObject(this.res).toString(2));
@@ -437,6 +412,7 @@ public class WxHandler {
 			this.res.put("msg", "delete course success!");
 		} catch (SQLException e) {
 			// TODO 自动生成的 catch 块
+			this.res.put("msg", e.toString());
 			e.printStackTrace();
 		}
 		this.out.print(new JSONObject(this.res).toString(2));
@@ -469,15 +445,23 @@ public class WxHandler {
 				courseInfo.put("courseName", rs.getString("courseName"));
 				courseInfo.put("logo", rs.getString("logo"));
 				courseInfo.put("gmtCreate", rs.getLong("gmtCreate"));
-				courseInfo.put("idCreater", rs.getInt("idCreater"));
+//				courseInfo.put("idCreater", rs.getInt("idCreater"));
+				String sql2 = "select name from pf_user where idUser = ?;";
+				this.sqlmgr.prepare(sql2);
+				this.sqlmgr.preparedStmt.setInt(1, rs.getInt("idCreater"));
+				ResultSet rS = this.sqlmgr.preparedStmt.executeQuery();
+				if (rS.next()) {
+					courseInfo.put("CreaterName", rS.getString("name"));
+				}
 				this.res.put("courseInfo", courseInfo);
 				this.res.put("errCode", 0);
 				this.res.put("msg", "get coursedetail success!");
 			} else {
-				this.res.put("errCode", 4002);
+				this.res.put("errCode", 4000);
 				this.res.put("msg", "the course is not exist!");
 			}
 		} catch (SQLException e) {
+			this.res.put("msg", e.toString());
 			// TODO 自动生成的 catch 块
 			e.printStackTrace();
 		}
@@ -531,6 +515,7 @@ public class WxHandler {
 				}
 			} catch (SQLException e) {
 				// TODO 自动生成的 catch 块
+				this.res.put("msg", e.toString());
 				e.printStackTrace();
 			}
 			this.out.print(new JSONObject(this.res).toString(2));
@@ -560,6 +545,7 @@ public class WxHandler {
 		this.sqlmgr = new SQLManager();
 		this.sqlmgr.prepare(sql);
 		try {
+			this.sqlmgr.preparedStmt = this.sqlmgr.conn.prepareStatement(sql, this.sqlmgr.stmt.RETURN_GENERATED_KEYS);
 			this.sqlmgr.preparedStmt.setInt(1, idCourse);
 			this.sqlmgr.preparedStmt.setString(2, signinName);
 			this.sqlmgr.preparedStmt.setLong(3, gmtStart);
@@ -571,13 +557,19 @@ public class WxHandler {
 			this.sqlmgr.preparedStmt.setString(9, description);
 			this.sqlmgr.preparedStmt.setInt(10, 1);
 			this.sqlmgr.preparedStmt.setLong(11, totalSeconds);
-
-			this.sqlmgr.preparedStmt.execute();
+//			this.sqlmgr.preparedStmt = this.sqlmgr.conn.prepareStatement(sql, this.sqlmgr.stmt.RETURN_GENERATED_KEYS);
+//			this.sqlmgr.preparedStmt.execute();
+			this.sqlmgr.preparedStmt.executeUpdate();
+			ResultSet rs = this.sqlmgr.preparedStmt.getGeneratedKeys();
+			if (rs.next()) {
+				this.res.put("idSignin", rs.getInt(1));
+			}
 			this.res.put("errCode", 0);
 			this.res.put("msg", "signin create success!");
 
 		} catch (SQLException e) {
 			// TODO 自动生成的 catch 块
+			this.res.put("msg", e.toString());
 			e.printStackTrace();
 		}
 		this.out.print(new JSONObject(this.res).toString(2));
@@ -610,8 +602,128 @@ public class WxHandler {
 			this.res.put("errCode", 0);
 			this.res.put("msg", "select success!");
 		} catch (SQLException e) {
+			this.res.put("msg", e.toString());
 			// TODO 自动生成的 catch 块
 			e.printStackTrace();
+			this.res.put("msg", e.toString());
+		}
+		this.out.print(new JSONObject(this.res).toString(2));
+	}
+
+	/**
+	 * 获得创建的课程列表
+	 */
+	public void getCreatecourselist() {
+		int idCreater = this.Req.getInt("idUser");
+		String sql = "select * from pf_course where idCreater = ? and status = 1;";
+		this.sqlmgr = new SQLManager();
+
+		this.sqlmgr.prepare(sql);
+		List<HashMap> courseInfo = new ArrayList<HashMap>();
+		try {
+			this.sqlmgr.preparedStmt.setInt(1, idCreater);
+			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
+			while (rs.next()) {
+				HashMap<Object, Object> Info = new HashMap<>();
+				Info.put("idCourse", rs.getInt("idCourse"));
+				Info.put("courseName", rs.getString("courseName"));
+				Info.put("logo", rs.getString("logo"));
+				courseInfo.add(Info);
+			}
+			this.res.put("courseInfo", courseInfo);
+			this.res.put("errCode", 0);
+			this.res.put("msg", "get course success!");
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+			this.res.put("msg", e.toString());
+		}
+		this.out.print(new JSONObject(this.res).toString(2));
+	}
+
+	/**
+	 * 获得加入的课程列表
+	 */
+	public void getJoincourselist() {
+		int idUser = this.Req.getInt("idUser");
+		this.sqlmgr = new SQLManager();
+		String sql = "select * from pf_courseAdd where idUser = ? and status = 1;";
+
+		this.sqlmgr.prepare(sql);
+		List<HashMap> courseInfo = new ArrayList<HashMap>();
+		try {
+			this.sqlmgr.preparedStmt.setInt(1, idUser);
+			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
+			while (rs.next()) {
+				HashMap<Object, Object> Info = new HashMap<>();
+				int idCourse = rs.getInt("idCourse");
+				String sql1 = "select * from pf_course where idCourse = ? and status = 1;";
+				this.sqlmgr.prepare(sql1);
+				this.sqlmgr.preparedStmt.setInt(1, idCourse);
+				ResultSet Rs = this.sqlmgr.preparedStmt.executeQuery();
+				if (Rs.next()) {
+					Info.put("idCourse", idCourse);
+					Info.put("idCreater", Rs.getInt("idCreater"));
+					Info.put("courseName", Rs.getString("courseName"));
+					Info.put("logo", Rs.getString("logo"));
+					Info.put("questionSet", Rs.getInt("questionSet"));
+				}
+				courseInfo.add(Info);
+			}
+			this.res.put("errCode", 0);
+			this.res.put("msg", "get courseInfo success!");
+			this.res.put("courseInfo", courseInfo);
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+			this.res.put("msg", e.toString());
+		}
+		this.out.print(new JSONObject(this.res).toString(2));
+	}
+
+	/**
+	 * 学生进行签到
+	 */
+	public void doSignin() {
+		int idSignin = this.Req.getInt("idSignin");
+		int idUser = 2;
+//		int idUser = Integer.parseInt(this.session.getAttribute("idUser").toString());
+		BigDecimal latitude = this.Req.getBigDecimal("latitude");
+		BigDecimal longitude = this.Req.getBigDecimal("longitude");
+		int horizontalAccuracy = this.Req.getInt("horizontalAccuracy");
+//		String sql = "insert into pf_signinRecard (idUser, longitude, latitude, horizontalAccuracy, status, gmtCreate) values (?, ?, ?, ?, ?, ?);";
+		String sql = "select * from pf_signinRecord where idSignin = ? and idUser = ?;";
+
+		this.sqlmgr = new SQLManager();
+		this.sqlmgr.prepare(sql);
+		try {
+			this.sqlmgr.preparedStmt.setInt(1, idSignin);
+			this.sqlmgr.preparedStmt.setInt(2, idUser);
+			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
+			if (rs.next()) {
+				if (rs.getInt("status") == 1) {
+					this.res.put("errCode", 1);
+					this.res.put("msg", "user has already doSignin!");
+				}
+			} else {
+				sql = "insert into pf_signinRecord (idUser, longitude, latitude, horizontalAccuracy, status, gmtCreate, idSignin) values (?, ?, ?, ?, ?, ?, ?);";
+				this.sqlmgr.prepare(sql);
+				this.sqlmgr.preparedStmt.setInt(1, idUser);
+				this.sqlmgr.preparedStmt.setBigDecimal(2, longitude);
+				this.sqlmgr.preparedStmt.setBigDecimal(3, latitude);
+				this.sqlmgr.preparedStmt.setInt(4, horizontalAccuracy);
+				this.sqlmgr.preparedStmt.setInt(5, 1);
+				this.sqlmgr.preparedStmt.setLong(6, System.currentTimeMillis() / 1000);
+				this.sqlmgr.preparedStmt.setInt(7, idSignin);
+
+				this.sqlmgr.preparedStmt.execute();
+				this.res.put("errCode", 0);
+				this.res.put("msg", "doSignin success!");
+			}
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+			this.res.put("msg", e.toString());
 		}
 		this.out.print(new JSONObject(this.res).toString(2));
 	}
