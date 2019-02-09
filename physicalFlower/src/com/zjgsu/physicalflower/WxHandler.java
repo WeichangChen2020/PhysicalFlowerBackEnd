@@ -24,8 +24,6 @@ public class WxHandler {
 	protected HashMap<Object, Object> res;
 	protected String appId = "wx9061828744e52511";
 	protected String appSecret = "f8edd6c9131964c83646a2056eba3700";
-	protected int errCode = -1;
-	protected String msg = "init";
 
 	public WxHandler(JSONObject Req, PrintWriter out, HttpSession session) throws IOException {
 		this.Req = Req;
@@ -95,6 +93,7 @@ public class WxHandler {
 						this.res.put("errCode", 1);
 						this.res.put("msg", "user information is need to supplement!");
 						this.session.setAttribute("idUser", rs.getInt("idUser"));
+						this.res.put("idUser", rs.getInt("idUser"));
 					}
 
 				} else {
@@ -109,7 +108,7 @@ public class WxHandler {
 					this.sqlmgr.preparedStmt.executeUpdate();
 					ResultSet Rs = this.sqlmgr.preparedStmt.getGeneratedKeys();
 					if (Rs.next()) {
-						this.res.put("idUser", rs.getInt(1));
+						this.res.put("idUser", Rs.getInt(1));
 						this.session.setAttribute("idUser", Rs.getInt(1));
 					}
 					this.res.put("errCode", 0);
@@ -150,7 +149,7 @@ public class WxHandler {
 
 //		    	更新原有记录(status置1)
 					this.sqlmgr = new SQLManager();
-					sql = "UPDATE pf_user SET nickName=?, avatarUrl=?, name=?, telphone=?, stunum=?, country=?, province=?, city=?, status=1, gmtModify=? WHERE openid=?";
+					sql = "UPDATE pf_user SET nickName=?, avatarUrl=?, name=?, telphone=?, stunum=?, country=?, province=?, city=?, status=1, gmtModify=?, gender = ? WHERE openid=?";
 					this.sqlmgr.prepare(sql);
 					this.sqlmgr.preparedStmt.setString(1,
 							this.Req.getJSONObject("userBasicInfo").getString("nickName"));
@@ -165,20 +164,20 @@ public class WxHandler {
 							this.Req.getJSONObject("userBasicInfo").getString("province"));
 					this.sqlmgr.preparedStmt.setString(8, this.Req.getJSONObject("userBasicInfo").getString("city"));
 					this.sqlmgr.preparedStmt.setLong(9, System.currentTimeMillis() / 1000);
-					this.sqlmgr.preparedStmt.setString(10, this.session.getAttribute("openid").toString());
+					this.sqlmgr.preparedStmt.setInt(10, this.Req.getJSONObject("userBasicInfo").getInt("gender"));
+					this.sqlmgr.preparedStmt.setString(11, this.session.getAttribute("openid").toString());
 					this.sqlmgr.preparedStmt.execute();
 
+					this.Req.getJSONObject("userBasicInfo").put("idUser", idUser);
 					this.res.put("userBasicInfo", this.Req.getJSONObject("userBasicInfo"));
-					errCode = 0;
-					msg = "update success";
+					this.res.put("errCode", 0);
+					this.res.put("msg", "msg success!");
 				}
 
 			} catch (SQLException e) {
 				e.printStackTrace();
 				this.res.put("msg", e.toString());
 			}
-			this.res.put("errCode", errCode);
-			this.res.put("msg", msg);
 			this.out.println(new JSONObject(this.res).toString(2));
 		}
 	}
@@ -275,7 +274,7 @@ public class WxHandler {
 
 						this.sqlmgr.preparedStmt.execute();
 
-						this.res.put("errCode", 1);
+						this.res.put("errCode", 0);
 						this.res.put("msg", "add(insert) success!");
 					}
 
@@ -328,7 +327,7 @@ public class WxHandler {
 						courseBasicInfo.put("logo", rs.getString("logo"));
 
 						this.res.put("courseBasicInfo", courseBasicInfo);
-						this.res.put("errCode", 4002);
+						this.res.put("errCode", 4003);
 						this.res.put("msg", "Sorry,the course has already exists!");
 
 					} else {
@@ -376,7 +375,7 @@ public class WxHandler {
 						courseBasicInfo.put("logo", Rs.getString("logo"));
 
 						this.res.put("courseBasicInfo", courseBasicInfo);
-						this.res.put("errCode", 1);
+						this.res.put("errCode", 0);
 						this.res.put("msg", "create(insert) success!");
 					}
 
@@ -457,7 +456,7 @@ public class WxHandler {
 				this.res.put("errCode", 0);
 				this.res.put("msg", "get coursedetail success!");
 			} else {
-				this.res.put("errCode", 4000);
+				this.res.put("errCode", 4003);
 				this.res.put("msg", "the course is not exist!");
 			}
 		} catch (SQLException e) {
@@ -576,7 +575,7 @@ public class WxHandler {
 	}
 
 	/**
-	 * @author Mizuki 获得签到信息
+	 * @author Mizuki 获得课程签到列表
 	 */
 
 	public void getSigninList() {
@@ -614,7 +613,7 @@ public class WxHandler {
 	 * 获得创建的课程列表
 	 */
 	public void getCreatecourselist() {
-		int idCreater = this.Req.getInt("idUser");
+		int idCreater = Integer.parseInt(this.session.getAttribute("idUser").toString());
 		String sql = "select * from pf_course where idCreater = ? and status = 1;";
 		this.sqlmgr = new SQLManager();
 
@@ -645,7 +644,7 @@ public class WxHandler {
 	 * 获得加入的课程列表
 	 */
 	public void getJoincourselist() {
-		int idUser = this.Req.getInt("idUser");
+		int idUser = Integer.parseInt(this.session.getAttribute("idUser").toString());
 		this.sqlmgr = new SQLManager();
 		String sql = "select * from pf_courseAdd where idUser = ? and status = 1;";
 
@@ -728,4 +727,10 @@ public class WxHandler {
 		this.out.print(new JSONObject(this.res).toString(2));
 	}
 
+	/**
+	 * @author Mizuki 获得学生签到信息
+	 */
+	public void getStusigninlist() {
+		
+	}
 }

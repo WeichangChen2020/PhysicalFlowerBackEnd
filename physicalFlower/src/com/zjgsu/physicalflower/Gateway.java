@@ -80,6 +80,9 @@ public class Gateway extends HttpServlet {
 			case"getJoincourselist":
 				wxhdr.getJoincourselist();
 				break;
+			case"getStusigninlist":
+				wxhdr.getStusigninlist();
+				break;
 			}
 
 		} else if (pf.equals("dp")) {
