@@ -47,8 +47,8 @@ public class Gateway extends HttpServlet {
 			case "updateInfo":
 				wxhdr.updateInfo();
 				break;
-			case "addCourse":
-				wxhdr.addCourse();
+			case "addToCourse":
+				wxhdr.addToCourse();
 				break;
 			case "delUser":
 				wxhdr.delUser();
@@ -80,8 +80,20 @@ public class Gateway extends HttpServlet {
 			case"getJoincourselist":
 				wxhdr.getJoincourselist();
 				break;
-			case"getStusigninlist":
-				wxhdr.getStusigninlist();
+			case"getStuAllSigninList":
+				wxhdr.getStuAllSigninList();
+				break;
+			case"manageSignin":
+				wxhdr. manageSignin();
+				break;
+			case"delSigninRecord":
+				wxhdr.delSigninRecord();
+				break;
+			case"substitudeSignin":
+				wxhdr.substitudeSignin();
+				break;
+			case"getDoingSigninList":
+				wxhdr.getDoingSigninList();
 				break;
 			}
 
