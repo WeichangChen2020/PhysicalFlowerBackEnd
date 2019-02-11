@@ -95,6 +95,12 @@ public class Gateway extends HttpServlet {
 			case"getDoingSigninList":
 				wxhdr.getDoingSigninList();
 				break;
+			case"getStuList":
+				wxhdr.getStuList();
+				break;
+			case"getClassSigninInfo":
+				wxhdr.getClassSigninInfo();
+				break;
 			}
 
 		} else if (pf.equals("dp")) {

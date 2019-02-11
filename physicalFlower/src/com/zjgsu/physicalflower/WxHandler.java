@@ -602,6 +602,10 @@ public class WxHandler {
 				HashMap<Object, Object> Info = new HashMap<>();
 				Info.put("idSignin", rs.getInt("idSignin"));
 				Info.put("idCourse", rs.getInt("idCourse"));
+				Info.put("signinName", rs.getString("signinName"));
+				Info.put("gmtStrat", rs.getLong("gmtStart"));
+				Info.put("gmtEnd", rs.getLong("gmtEnd"));
+				Info.put("description", rs.getString("description"));
 				signinInfo.add(Info);
 			}
 			this.res.put("signinInfo", signinInfo);
@@ -1014,6 +1018,85 @@ public class WxHandler {
 				e.printStackTrace();
 				this.res.put("msg", e.toString());
 			}
+		}
+		this.out.print(new JSONObject(this.res).toString(2));
+	}
+
+	/**
+	 * @author Mizuki 获取课程的学生信息列表
+	 */
+	public void getStuList() {
+		int idCourse = this.Req.getInt("idCourse");
+		this.sqlmgr = new SQLManager();
+		String sql = "SELECT * FROM physicalFlower.pf_courseAdd,physicalFlower.pf_user where pf_user.idUser=pf_courseAdd.idUser and pf_user.status =1 and pf_courseAdd.`status`=1 and idCourse = ?;";
+
+		this.sqlmgr.prepare(sql);
+		try {
+			List<HashMap> classStuInfo = new ArrayList<HashMap>();
+			this.sqlmgr.preparedStmt.setInt(1, idCourse);
+			int count = 0;
+			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
+
+			while (rs.next()) {
+				HashMap<Object, Object> Info = new HashMap<>();
+				Info.put("idUser", rs.getInt("idUser"));
+				Info.put("idCourse", rs.getInt("idCourse"));
+				Info.put("name", rs.getString("name"));
+				Info.put("stunume", rs.getString("stunum"));
+				count = count + 1;
+				classStuInfo.add(Info);
+			}
+			this.res.put("count", count);
+			this.res.put("classStuInfo", classStuInfo);
+			this.res.put("errCode", 0);
+			this.res.put("msg", "get information success!");
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+			this.res.put("msg", e.toString());
+			
+		}
+		this.out.print(new JSONObject(this.res).toString(2));
+	}
+
+	public void getClassSigninInfo() {
+		int idSignin = this.Req.getInt("idSignin");
+		int idCourse = this.Req.getInt("idCourse");
+		this.sqlmgr = new SQLManager();
+		String sql = "SELECT * FROM physicalFlower.pf_courseAdd,physicalFlower.pf_user where pf_user.idUser=pf_courseAdd.idUser and pf_user.status =1 and pf_courseAdd.`status`=1 and idCourse = ?;";
+		
+		this.sqlmgr.prepare(sql);
+		try {
+			int count = 0;
+			List<HashMap> classStuSigninInfo = new ArrayList<HashMap>();
+			this.sqlmgr.preparedStmt.setInt(1, idCourse);
+			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
+			while(rs.next()) {
+				HashMap<Object, Object> Info = new HashMap<>();
+				int check = 0;
+				int idUser = rs.getInt("idUser");
+				Info.put("name", rs.getString("name"));
+				Info.put("idUser", idUser);
+				Info.put("stunum", rs.getString("stunum"));
+				String Sql = "select * from pf_signinRecord where idUser = ? and idSignin = ? and status = 1;";
+				this.sqlmgr.prepare(Sql);
+				this.sqlmgr.preparedStmt.setInt(1, idCourse);
+				this.sqlmgr.preparedStmt.setInt(2, idSignin);
+				ResultSet Rs = this.sqlmgr.preparedStmt.executeQuery();
+				if(Rs.next()) {
+					check = 1;
+					count = count + 1;
+				}
+				Info.put("check", check);
+				classStuSigninInfo.add(Info);
+			}
+			this.res.put("errCode", 0);
+			this.res.put("msg", "get information success!");
+			this.res.put("count", count);
+			this.res.put("classStuSigninInfo", classStuSigninInfo);
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
 		}
 		this.out.print(new JSONObject(this.res).toString(2));
 	}
