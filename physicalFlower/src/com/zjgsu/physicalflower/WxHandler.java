@@ -1054,7 +1054,7 @@ public class WxHandler {
 			// TODO 自动生成的 catch 块
 			e.printStackTrace();
 			this.res.put("msg", e.toString());
-			
+
 		}
 		this.out.print(new JSONObject(this.res).toString(2));
 	}
@@ -1064,14 +1064,14 @@ public class WxHandler {
 		int idCourse = this.Req.getInt("idCourse");
 		this.sqlmgr = new SQLManager();
 		String sql = "SELECT * FROM physicalFlower.pf_courseAdd,physicalFlower.pf_user where pf_user.idUser=pf_courseAdd.idUser and pf_user.status =1 and pf_courseAdd.`status`=1 and idCourse = ?;";
-		
+
 		this.sqlmgr.prepare(sql);
 		try {
 			int count = 0;
 			List<HashMap> classStuSigninInfo = new ArrayList<HashMap>();
 			this.sqlmgr.preparedStmt.setInt(1, idCourse);
 			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
-			while(rs.next()) {
+			while (rs.next()) {
 				HashMap<Object, Object> Info = new HashMap<>();
 				int check = 0;
 				int idUser = rs.getInt("idUser");
@@ -1083,7 +1083,7 @@ public class WxHandler {
 				this.sqlmgr.preparedStmt.setInt(1, idCourse);
 				this.sqlmgr.preparedStmt.setInt(2, idSignin);
 				ResultSet Rs = this.sqlmgr.preparedStmt.executeQuery();
-				if(Rs.next()) {
+				if (Rs.next()) {
 					check = 1;
 					count = count + 1;
 				}
@@ -1101,5 +1101,26 @@ public class WxHandler {
 		this.out.print(new JSONObject(this.res).toString(2));
 	}
 
+	/**
+	 * @author Mizuki 老师删除某次签到
+	 */
+	public void delSignin() {
+		int idSignin = this.Req.getInt("idSignin");
+		this.sqlmgr = new SQLManager();
+		String sql = "update pf_signin set status = 0 , gmtModify = ? where idSignin = ?;";
+
+		this.sqlmgr.prepare(sql);
+		try {
+			this.sqlmgr.preparedStmt.setLong(1, System.currentTimeMillis()/1000);
+			this.sqlmgr.preparedStmt.setInt(2, idSignin);
+			this.sqlmgr.preparedStmt.execute();
+			this.res.put("errCode", 0);
+			this.res.put("msg", "delete signin success!");
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+		}
+		this.out.print(new JSONObject(this.res).toString(2));
+	}
 
 }

@@ -101,6 +101,9 @@ public class Gateway extends HttpServlet {
 			case"getClassSigninInfo":
 				wxhdr.getClassSigninInfo();
 				break;
+			case"delSignin":
+				wxhdr.delSignin();
+				break;
 			}
 
 		} else if (pf.equals("dp")) {
