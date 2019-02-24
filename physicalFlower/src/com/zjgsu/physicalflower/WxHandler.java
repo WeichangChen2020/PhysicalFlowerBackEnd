@@ -727,7 +727,7 @@ public class WxHandler {
 	}
 
 	/**
-	 * 学生进行签到
+	 * @author Mizuki 学生进行签到(进行距离判断)
 	 */
 	public void doSignin() {
 		if (this.session.getAttribute("idUser") == null) {
@@ -737,12 +737,10 @@ public class WxHandler {
 			return;
 		} else {
 			int idSignin = this.Req.getInt("idSignin");
-//		int idUser = 2;
 			int idUser = Integer.parseInt(this.session.getAttribute("idUser").toString());
 			BigDecimal latitude = this.Req.getBigDecimal("latitude");
 			BigDecimal longitude = this.Req.getBigDecimal("longitude");
 			int horizontalAccuracy = this.Req.getInt("horizontalAccuracy");
-//		String sql = "insert into pf_signinRecard (idUser, longitude, latitude, horizontalAccuracy, status, gmtCreate) values (?, ?, ?, ?, ?, ?);";
 			String sql = "select * from pf_signinRecord where idSignin = ? and idUser = ?;";
 
 			this.sqlmgr = new SQLManager();
@@ -768,19 +766,41 @@ public class WxHandler {
 						this.res.put("msg", "doSignin success!");
 					}
 				} else {
-					sql = "insert into pf_signinRecord (idUser, longitude, latitude, horizontalAccuracy, status, gmtCreate, idSignin) values (?, ?, ?, ?, ?, ?, ?);";
-					this.sqlmgr.prepare(sql);
-					this.sqlmgr.preparedStmt.setInt(1, idUser);
-					this.sqlmgr.preparedStmt.setBigDecimal(2, longitude);
-					this.sqlmgr.preparedStmt.setBigDecimal(3, latitude);
-					this.sqlmgr.preparedStmt.setInt(4, horizontalAccuracy);
-					this.sqlmgr.preparedStmt.setInt(5, 1);
-					this.sqlmgr.preparedStmt.setLong(6, System.currentTimeMillis() / 1000);
-					this.sqlmgr.preparedStmt.setInt(7, idSignin);
+					DistanceUtil distance = new DistanceUtil();
+					String Sql = "select * from pf_signin where idSignin = ?;";
+					this.sqlmgr.prepare(Sql);
+					this.sqlmgr.preparedStmt.setInt(1, idSignin);
+					ResultSet Rs = this.sqlmgr.preparedStmt.executeQuery();
+					if (Rs.next()) {
+						BigDecimal lat2 = Rs.getBigDecimal("latitude");
+						BigDecimal lng2 = Rs.getBigDecimal("longitude");
+						int radius = Rs.getInt("radius");
+						if (distance.getDistance(latitude.doubleValue(), longitude.doubleValue(), lat2.doubleValue(),
+								lng2.doubleValue()) <= radius) {
+							sql = "insert into pf_signinRecord (idUser, longitude, latitude, horizontalAccuracy, status, gmtCreate, idSignin) values (?, ?, ?, ?, ?, ?, ?);";
+							this.sqlmgr.prepare(sql);
+							this.sqlmgr.preparedStmt.setInt(1, idUser);
+							this.sqlmgr.preparedStmt.setBigDecimal(2, longitude);
+							this.sqlmgr.preparedStmt.setBigDecimal(3, latitude);
+							this.sqlmgr.preparedStmt.setInt(4, horizontalAccuracy);
+							this.sqlmgr.preparedStmt.setInt(5, 1);
+							this.sqlmgr.preparedStmt.setLong(6, System.currentTimeMillis() / 1000);
+							this.sqlmgr.preparedStmt.setInt(7, idSignin);
 
-					this.sqlmgr.preparedStmt.execute();
-					this.res.put("errCode", 0);
-					this.res.put("msg", "doSignin success!");
+							this.sqlmgr.preparedStmt.execute();
+							this.res.put("errCode", 0);
+							this.res.put("msg", "doSignin success!");
+						} else {
+							this.res.put("distance", distance.getDistance(latitude.doubleValue(), longitude.doubleValue(), lat2.doubleValue(),
+									lng2.doubleValue()));
+							this.res.put("errCode", 4003);
+							this.res.put("msg", "sorry, you are not in the area!");
+						}
+					} else {
+						this.res.put("errCode", 1);
+						this.res.put("msg", "sorry, the signin is not exist!");
+						return;
+					}
 				}
 			} catch (SQLException e) {
 				// TODO 自动生成的 catch 块
@@ -854,32 +874,26 @@ public class WxHandler {
 	public void manageSignin() {
 		int idSignin = this.Req.getInt("idSignin");
 		int radius = this.Req.getInt("radius");
-		long gmtStart = this.Req.getLong("gmtStart");
+//		long gmtStart = this.Req.getLong("gmtStart");
 		long gmtEnd = this.Req.getLong("gmtEnd");
-		if (gmtEnd <= gmtStart) {
-			this.res.put("errCode", 4003);
-			this.res.put("msg", "Sorry, you must reset time!");
-		} else {
-			this.sqlmgr = new SQLManager();
-			String sql = "update pf_signin set radius = ?, gmtStart = ?, gmtEnd = ?, gmtModify = ? where idSignin = ?;";
+		this.sqlmgr = new SQLManager();
+		String sql = "update pf_signin set radius = ?, gmtEnd = ?, gmtModify = ? where idSignin = ?;";
 
-			this.sqlmgr.prepare(sql);
-			try {
-				this.sqlmgr.preparedStmt.setInt(1, radius);
-				this.sqlmgr.preparedStmt.setLong(2, gmtStart);
-				this.sqlmgr.preparedStmt.setLong(3, gmtEnd);
-				this.sqlmgr.preparedStmt.setLong(4, System.currentTimeMillis() / 1000);
-				this.sqlmgr.preparedStmt.setInt(5, idSignin);
+		this.sqlmgr.prepare(sql);
+		try {
+			this.sqlmgr.preparedStmt.setInt(1, radius);
+			this.sqlmgr.preparedStmt.setLong(2, gmtEnd);
+			this.sqlmgr.preparedStmt.setLong(3, System.currentTimeMillis() / 1000);
+			this.sqlmgr.preparedStmt.setInt(4, idSignin);
 
-				this.sqlmgr.preparedStmt.execute();
+			this.sqlmgr.preparedStmt.execute();
 
-				this.res.put("errCode", 0);
-				this.res.put("msg", "manange signin success!");
-			} catch (SQLException e) {
-				// TODO 自动生成的 catch 块
-				e.printStackTrace();
-				this.res.put("msg", e.toString());
-			}
+			this.res.put("errCode", 0);
+			this.res.put("msg", "manange signin success!");
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+			this.res.put("msg", e.toString());
 		}
 		this.out.print(new JSONObject(this.res).toString(2));
 	}
@@ -917,47 +931,57 @@ public class WxHandler {
 	public void substitudeSignin() {
 		int idSignin = this.Req.getInt("idSignin");
 		int idUser = this.Req.getInt("idUser");
-		BigDecimal latitude = this.Req.getBigDecimal("latitude");
-		BigDecimal longitude = this.Req.getBigDecimal("longitude");
-		int horizontalAccuracy = this.Req.getInt("horizontalAccuracy");
-		String sql = "select * from pf_signinRecord where idSignin = ? and idUser = ?;";
-
 		this.sqlmgr = new SQLManager();
-		this.sqlmgr.prepare(sql);
+		String Sql = "select * from pf_signin where idSignin = ?";
+		String sql = "select * from pf_signinRecord where idSignin = ? and idUser = ?;";
 		try {
+			this.sqlmgr.prepare(Sql);
 			this.sqlmgr.preparedStmt.setInt(1, idSignin);
-			this.sqlmgr.preparedStmt.setInt(2, idUser);
-			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
-			if (rs.next()) {
-				if (rs.getInt("status") == 1) {
-					this.res.put("errCode", 1);
-					this.res.put("msg", "user has already doSignin!");
-				} else {
-					sql = "update pf_signinRecord set status = 1, gmtModify = ? where idSignin = ? and idUser  = ?;";
+			ResultSet Rs = this.sqlmgr.preparedStmt.executeQuery();
+			if (Rs.next()) {
+				this.sqlmgr.prepare(sql);
+				BigDecimal latitude = Rs.getBigDecimal("latitude");
+				BigDecimal longitude = Rs.getBigDecimal("longitude");
+				int horizontalAccuracy = Rs.getInt("horizontalAccuracy");
 
+				this.sqlmgr.preparedStmt.setInt(1, idSignin);
+				this.sqlmgr.preparedStmt.setInt(2, idUser);
+				ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
+				if (rs.next()) {
+					if (rs.getInt("status") == 1) {
+						this.res.put("errCode", 1);
+						this.res.put("msg", "user has already doSignin!");
+					} else {
+						sql = "update pf_signinRecord set status = 2, gmtModify = ? where idSignin = ? and idUser  = ?;";
+
+						this.sqlmgr.prepare(sql);
+						this.sqlmgr.preparedStmt.setLong(1, System.currentTimeMillis() / 1000);
+						this.sqlmgr.preparedStmt.setInt(2, idSignin);
+						this.sqlmgr.preparedStmt.setInt(3, idUser);
+
+						this.sqlmgr.preparedStmt.execute();
+						this.res.put("errCode", 0);
+						this.res.put("msg", "doSignin success!");
+					}
+				} else {
+					sql = "insert into pf_signinRecord (idUser, longitude, latitude, horizontalAccuracy, status, gmtCreate, idSignin) values (?, ?, ?, ?, ?, ?, ?);";
 					this.sqlmgr.prepare(sql);
-					this.sqlmgr.preparedStmt.setLong(1, System.currentTimeMillis() / 1000);
-					this.sqlmgr.preparedStmt.setInt(2, idSignin);
-					this.sqlmgr.preparedStmt.setInt(3, idUser);
+					this.sqlmgr.preparedStmt.setInt(1, idUser);
+					this.sqlmgr.preparedStmt.setBigDecimal(2, longitude);
+					this.sqlmgr.preparedStmt.setBigDecimal(3, latitude);
+					this.sqlmgr.preparedStmt.setInt(4, horizontalAccuracy);
+					this.sqlmgr.preparedStmt.setInt(5, 2);
+					this.sqlmgr.preparedStmt.setLong(6, System.currentTimeMillis() / 1000);
+					this.sqlmgr.preparedStmt.setInt(7, idSignin);
 
 					this.sqlmgr.preparedStmt.execute();
 					this.res.put("errCode", 0);
 					this.res.put("msg", "doSignin success!");
 				}
-			} else {
-				sql = "insert into pf_signinRecord (idUser, longitude, latitude, horizontalAccuracy, status, gmtCreate, idSignin) values (?, ?, ?, ?, ?, ?, ?);";
-				this.sqlmgr.prepare(sql);
-				this.sqlmgr.preparedStmt.setInt(1, idUser);
-				this.sqlmgr.preparedStmt.setBigDecimal(2, longitude);
-				this.sqlmgr.preparedStmt.setBigDecimal(3, latitude);
-				this.sqlmgr.preparedStmt.setInt(4, horizontalAccuracy);
-				this.sqlmgr.preparedStmt.setInt(5, 1);
-				this.sqlmgr.preparedStmt.setLong(6, System.currentTimeMillis() / 1000);
-				this.sqlmgr.preparedStmt.setInt(7, idSignin);
 
-				this.sqlmgr.preparedStmt.execute();
-				this.res.put("errCode", 0);
-				this.res.put("msg", "doSignin success!");
+			} else {
+				this.res.put("errCode", 4003);
+				this.res.put("msg", "no such signin!");
 			}
 		} catch (SQLException e) {
 			// TODO 自动生成的 catch 块
@@ -1003,9 +1027,9 @@ public class WxHandler {
 						ResultSet Rs = this.sqlmgr.preparedStmt.executeQuery();
 						if (Rs.next()) {
 							Info.put("status", Rs.getInt("status"));
-							Info.put("gmtCreate", Rs.getLong("gmtCreate"));
-							Info.put("longitude", Rs.getLong("longitude"));
-							Info.put("latitude", Rs.getLong("latitude"));
+//							Info.put("gmtCreate", Rs.getLong("gmtCreate"));
+//							Info.put("longitude", Rs.getLong("longitude"));
+//							Info.put("latitude", Rs.getLong("latitude"));
 						}
 						signinInfo.add(Info);
 					}
@@ -1059,6 +1083,10 @@ public class WxHandler {
 		this.out.print(new JSONObject(this.res).toString(2));
 	}
 
+	/**
+	 * @author Mizuki
+	 * @param check 0为已签到，1为未签到
+	 */
 	public void getClassSigninInfo() {
 		int idSignin = this.Req.getInt("idSignin");
 		int idCourse = this.Req.getInt("idCourse");
@@ -1080,7 +1108,7 @@ public class WxHandler {
 				Info.put("stunum", rs.getString("stunum"));
 				String Sql = "select * from pf_signinRecord where idUser = ? and idSignin = ? and status = 1;";
 				this.sqlmgr.prepare(Sql);
-				this.sqlmgr.preparedStmt.setInt(1, idCourse);
+				this.sqlmgr.preparedStmt.setInt(1, idUser);
 				this.sqlmgr.preparedStmt.setInt(2, idSignin);
 				ResultSet Rs = this.sqlmgr.preparedStmt.executeQuery();
 				if (Rs.next()) {
@@ -1111,7 +1139,7 @@ public class WxHandler {
 
 		this.sqlmgr.prepare(sql);
 		try {
-			this.sqlmgr.preparedStmt.setLong(1, System.currentTimeMillis()/1000);
+			this.sqlmgr.preparedStmt.setLong(1, System.currentTimeMillis() / 1000);
 			this.sqlmgr.preparedStmt.setInt(2, idSignin);
 			this.sqlmgr.preparedStmt.execute();
 			this.res.put("errCode", 0);

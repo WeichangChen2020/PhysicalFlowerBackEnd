@@ -104,6 +104,7 @@ public class Gateway extends HttpServlet {
 			case"delSignin":
 				wxhdr.delSignin();
 				break;
+			case"":
 			}
 
 		} else if (pf.equals("dp")) {
