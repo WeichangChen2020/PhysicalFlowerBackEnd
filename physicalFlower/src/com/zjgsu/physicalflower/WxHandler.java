@@ -1106,7 +1106,7 @@ public class WxHandler {
 				Info.put("name", rs.getString("name"));
 				Info.put("idUser", idUser);
 				Info.put("stunum", rs.getString("stunum"));
-				String Sql = "select * from pf_signinRecord where idUser = ? and idSignin = ? and status = 1;";
+				String Sql = "select * from pf_signinRecord where idUser = ? and idSignin = ? and (status = 1 or status = 2);";
 				this.sqlmgr.prepare(Sql);
 				this.sqlmgr.preparedStmt.setInt(1, idUser);
 				this.sqlmgr.preparedStmt.setInt(2, idSignin);
