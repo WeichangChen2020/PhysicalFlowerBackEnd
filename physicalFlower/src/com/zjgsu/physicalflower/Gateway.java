@@ -104,12 +104,12 @@ public class Gateway extends HttpServlet {
 			case"delSignin":
 				wxhdr.delSignin();
 				break;
-			case"":
+			case"getChapterQuestionList":
+				wxhdr.getChapterQuestionList();
+				break;
 			}
 
-		} else if (pf.equals("dp")) {
-		}
-
+		} 
 	}
 
 	/**

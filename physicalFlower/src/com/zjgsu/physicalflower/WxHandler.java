@@ -24,6 +24,7 @@ public class WxHandler {
 	protected HashMap<Object, Object> res;
 	protected String appId = "wx9061828744e52511";
 	protected String appSecret = "f8edd6c9131964c83646a2056eba3700";
+	String imgUrl = "http://dataplatform-physicalflower.stor.sinaapp.com/physcialflower_questionbank/";
 
 	public WxHandler(JSONObject Req, PrintWriter out, HttpSession session) throws IOException {
 		this.Req = Req;
@@ -791,8 +792,8 @@ public class WxHandler {
 							this.res.put("errCode", 0);
 							this.res.put("msg", "doSignin success!");
 						} else {
-							this.res.put("distance", distance.getDistance(latitude.doubleValue(), longitude.doubleValue(), lat2.doubleValue(),
-									lng2.doubleValue()));
+							this.res.put("distance", distance.getDistance(latitude.doubleValue(),
+									longitude.doubleValue(), lat2.doubleValue(), lng2.doubleValue()));
 							this.res.put("errCode", 4003);
 							this.res.put("msg", "sorry, you are not in the area!");
 						}
@@ -1125,6 +1126,7 @@ public class WxHandler {
 		} catch (SQLException e) {
 			// TODO 自动生成的 catch 块
 			e.printStackTrace();
+			this.res.put("msg", e.toString());
 		}
 		this.out.print(new JSONObject(this.res).toString(2));
 	}
@@ -1147,6 +1149,38 @@ public class WxHandler {
 		} catch (SQLException e) {
 			// TODO 自动生成的 catch 块
 			e.printStackTrace();
+			this.res.put("msg", e.toString());
+		}
+		this.out.print(new JSONObject(this.res).toString(2));
+	}
+
+	/**
+	 * @author Mizuki 获取一个章节的所有题目
+	 */
+	public void getChapterQuestionList() {
+		int idQuestionChapter = this.Req.getInt("idQuestionChapter");
+		String sql = "select * from pf_questionBank where idQuestionChapter = ? and status = 1 and type = 4";
+		this.sqlmgr = new SQLManager();
+		this.sqlmgr.prepare(sql);
+
+		try {
+			List<HashMap> questionInfo = new ArrayList<HashMap>();
+			this.sqlmgr.preparedStmt.setInt(1, idQuestionChapter);
+			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
+
+			while (rs.next()) {
+				HashMap<Object, Object> Info = new HashMap<>();
+				Info.put("idQues", rs.getInt("idQues"));
+				Info.put("img", imgUrl + rs.getString("img"));
+				questionInfo.add(Info);
+			}
+			this.res.put("errCode", 0);
+			this.res.put("msg", "get list success!");
+			this.res.put("questionInfo", questionInfo);
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+			this.res.put("msg", e.toString());
 		}
 		this.out.print(new JSONObject(this.res).toString(2));
 	}
