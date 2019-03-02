@@ -110,6 +110,9 @@ public class Gateway extends HttpServlet {
 			case"arrangeHomework":
 				wxhdr.arrangeHomework();
 				break;
+			case"getHomeworkDetails":
+				wxhdr.getHomeworkDetails();
+				break;
 			}
 
 		} 
@@ -143,4 +146,6 @@ public class Gateway extends HttpServlet {
 		return new JSONObject(sb.toString());
 
 	}
+	
+	
 }

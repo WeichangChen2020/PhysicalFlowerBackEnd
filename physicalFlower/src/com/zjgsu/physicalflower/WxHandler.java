@@ -1191,9 +1191,8 @@ public class WxHandler {
 	public void arrangeHomework() {
 		int idCourse = this.Req.getInt("idCourse");
 		Long gmtEnd = this.Req.getLong("gmtEnd");
-		Long gmtStart = System.currentTimeMillis()/1000;
+		Long gmtStart = System.currentTimeMillis() / 1000;
 		int length = this.Req.getInt("length");
-		
 
 		if (gmtStart <= gmtEnd) {
 			this.res.put("errCode", 4003);
@@ -1225,7 +1224,7 @@ public class WxHandler {
 						this.sqlmgr.preparedStmt.setInt(1, idHomework);
 						this.sqlmgr.preparedStmt.setInt(2, idQues.getInt(String.valueOf(i)));
 						this.sqlmgr.preparedStmt.setInt(3, 1);
-						this.sqlmgr.preparedStmt.setLong(4, System.currentTimeMillis()/1000);
+						this.sqlmgr.preparedStmt.setLong(4, System.currentTimeMillis() / 1000);
 						this.sqlmgr.preparedStmt.execute();
 					}
 					this.res.put("errCode", 0);
@@ -1237,6 +1236,41 @@ public class WxHandler {
 				this.res.put("msg", e.toString());
 			}
 
+		}
+		this.out.print(new JSONObject(this.res).toString(2));
+	}
+
+	/**
+	 * @author Mizuki 老师获取布置的作业的具体信息（包含的题目，截止时间）
+	 */
+	public void getHomeworkDetails() {
+		int count = 0;
+		int idHomework = this.Req.getInt("idHomework");
+		this.sqlmgr = new SQLManager();
+		String sql = "select * from physicalFlower.pf_homeworkDetail,physicalFlower.pf_homework where pf_homework.idHomework = pf_homeworkDetail.idHomework and pf_homeworkDetail.idHomework = ? and pf_homeworkDetail.status = 1 and pf_homework.status = 1;";
+
+		this.sqlmgr.prepare(sql);
+		try {
+			this.sqlmgr.preparedStmt.setInt(1, idHomework);
+
+			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
+			List<HashMap> homeworkInfo = new ArrayList<HashMap>();
+			while (rs.next()) {
+				count = count + 1;
+				HashMap<Object, Object> Info = new HashMap<>();
+				Info.put("idQues", rs.getInt("idQues"));
+				Info.put("gmtEnd", rs.getLong("gmtEnd"));
+				Info.put("gmtStart", rs.getLong("gmtStart"));
+				homeworkInfo.add(Info);
+			}
+			this.res.put("errCode", 0);
+			this.res.put("msg", "get information success!");
+			this.res.put("count", count);
+			this.res.put("homeworkInfo", homeworkInfo);
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+			this.res.put("msg", e.toString());
 		}
 		this.out.print(new JSONObject(this.res).toString(2));
 	}
