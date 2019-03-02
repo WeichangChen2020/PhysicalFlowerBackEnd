@@ -1185,4 +1185,60 @@ public class WxHandler {
 		this.out.print(new JSONObject(this.res).toString(2));
 	}
 
+	/**
+	 * @author Mizuki 老师布置课后作业作业
+	 */
+	public void arrangeHomework() {
+		int idCourse = this.Req.getInt("idCourse");
+		Long gmtEnd = this.Req.getLong("gmtEnd");
+		Long gmtStart = System.currentTimeMillis()/1000;
+		int length = this.Req.getInt("length");
+		
+
+		if (gmtStart <= gmtEnd) {
+			this.res.put("errCode", 4003);
+			this.res.put("msg", "sorry, please reset time!");
+			return;
+		} else {
+			String sql = "insert into pf_homework (idCourse, gmtStart, gmtEnd, status, gmtCreate) values (?, ?, ?, ?, ?)";
+			this.sqlmgr = new SQLManager();
+			this.sqlmgr.prepare(sql);
+
+			try {
+				this.sqlmgr.preparedStmt = this.sqlmgr.conn.prepareStatement(sql,
+						this.sqlmgr.stmt.RETURN_GENERATED_KEYS);
+				this.sqlmgr.preparedStmt.setInt(1, idCourse);
+				this.sqlmgr.preparedStmt.setLong(2, gmtStart);
+				this.sqlmgr.preparedStmt.setLong(3, gmtEnd);
+				this.sqlmgr.preparedStmt.setInt(4, 1);
+				this.sqlmgr.preparedStmt.setLong(5, System.currentTimeMillis() / 1000);
+
+				this.sqlmgr.preparedStmt.executeUpdate();
+				ResultSet Rs = this.sqlmgr.preparedStmt.getGeneratedKeys();
+				if (Rs.next()) {
+					this.res.put("idHomework", Rs.getInt(1));
+					int idHomework = Rs.getInt(1);
+					JSONObject idQues = this.Req.getJSONObject("idQues");
+					String Sql = "insert into pf_homeworkDetail (idHomework, idQues, status, gmtCreate) values (?, ?, ?, ?)";
+					for (int i = 0; i < length; i++) {
+						this.sqlmgr.prepare(Sql);
+						this.sqlmgr.preparedStmt.setInt(1, idHomework);
+						this.sqlmgr.preparedStmt.setInt(2, idQues.getInt(String.valueOf(i)));
+						this.sqlmgr.preparedStmt.setInt(3, 1);
+						this.sqlmgr.preparedStmt.setLong(4, System.currentTimeMillis()/1000);
+						this.sqlmgr.preparedStmt.execute();
+					}
+					this.res.put("errCode", 0);
+					this.res.put("msg", "arrange homework success!");
+				}
+			} catch (SQLException e) {
+				// TODO 自动生成的 catch 块
+				e.printStackTrace();
+				this.res.put("msg", e.toString());
+			}
+
+		}
+		this.out.print(new JSONObject(this.res).toString(2));
+	}
+
 }
