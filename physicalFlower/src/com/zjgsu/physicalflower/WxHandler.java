@@ -1275,4 +1275,66 @@ public class WxHandler {
 		this.out.print(new JSONObject(this.res).toString(2));
 	}
 
+	/**
+	 * @author Mizuki 获取课程的作业列表
+	 */
+	public void getHomeworkList() {
+		int idCourse = this.Req.getInt("idCourse");
+		this.sqlmgr = new SQLManager();
+		String sql = "select * from pf_homework where idCourse = ? and status = 1;";
+
+		this.sqlmgr.prepare(sql);
+		try {
+			this.sqlmgr.preparedStmt.setInt(1, idCourse);
+
+			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
+			List<HashMap> homeworkInfo = new ArrayList<HashMap>();
+			while (rs.next()) {
+				HashMap<Object, Object> Info = new HashMap<>();
+				Info.put("idHomework", rs.getInt("idHomework"));
+				Info.put("gmtStart", rs.getLong("gmtStart"));
+				Info.put("gmtEnd", rs.getLong("gmtEnd"));
+				homeworkInfo.add(Info);
+			}
+			this.res.put("errCode", 0);
+			this.res.put("msg", "get the list success!");
+			this.res.put("homeworkInfo", homeworkInfo);
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+			this.res.put("msg", e.toString());
+		}
+		this.out.print(new JSONObject(this.res).toString(2));
+	}
+
+	/**
+	 * @author Mizuki 获取章节列表
+	 */
+	public void getChapterList() {
+		int idQuestionSet = this.Req.getInt("idQuestionSet");
+		this.sqlmgr = new SQLManager();
+		String sql = "select * from pf_questionChapter where idQuestionSet = ? and status = 1;";
+		
+		this.sqlmgr.prepare(sql);
+		List<HashMap> chapterInfo = new ArrayList<HashMap>();
+		try {
+			this.sqlmgr.preparedStmt.setInt(1, idQuestionSet);
+			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
+			while(rs.next()) {
+				HashMap<Object, Object> Info = new HashMap<>();
+				Info.put("idQuestionChapter", rs.getInt("idQuestionChapter"));
+				Info.put("nameChapter", rs.getString("nameChapter"));
+				chapterInfo.add(Info);
+			}
+			this.res.put("errCode", 0);
+			this.res.put("msg", "get list success!");
+			this.res.put("chapterInfo", chapterInfo);
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+			this.res.put("msg", e.toString());
+		}
+		this.out.print(new JSONObject(this.res).toString(2));
+	}
+
 }
