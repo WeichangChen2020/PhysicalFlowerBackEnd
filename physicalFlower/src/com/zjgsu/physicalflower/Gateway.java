@@ -119,6 +119,12 @@ public class Gateway extends HttpServlet {
 			case"getChapterList":
 				wxhdr.getChapterList();
 				break;
+			case"submitHomework":
+				wxhdr.submitHomework();
+				break;
+			case"getStuHomeworkList":
+				wxhdr.getStuHomeworkList();
+				break;
 			}
 
 		} 

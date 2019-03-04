@@ -1314,13 +1314,13 @@ public class WxHandler {
 		int idQuestionSet = this.Req.getInt("idQuestionSet");
 		this.sqlmgr = new SQLManager();
 		String sql = "select * from pf_questionChapter where idQuestionSet = ? and status = 1;";
-		
+
 		this.sqlmgr.prepare(sql);
 		List<HashMap> chapterInfo = new ArrayList<HashMap>();
 		try {
 			this.sqlmgr.preparedStmt.setInt(1, idQuestionSet);
 			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
-			while(rs.next()) {
+			while (rs.next()) {
 				HashMap<Object, Object> Info = new HashMap<>();
 				Info.put("idQuestionChapter", rs.getInt("idQuestionChapter"));
 				Info.put("nameChapter", rs.getString("nameChapter"));
@@ -1335,6 +1335,81 @@ public class WxHandler {
 			this.res.put("msg", e.toString());
 		}
 		this.out.print(new JSONObject(this.res).toString(2));
+	}
+
+	/**
+	 * @author Mizuki 提交作业
+	 */
+	public void submitHomework() {
+		if (this.session.getAttribute("idUser") == null) {
+			this.res.put("errCode", 4002);
+			this.res.put("msg", "Login required.");
+			this.out.println(new JSONObject(this.res).toString(2));
+			return;
+		} else {
+			int idUser = Integer.parseInt(this.session.getAttribute("idUser").toString());
+
+			int idHomeworkDetail = this.Req.getInt("idHomeworkDetail");
+			String submitImg1 = "";
+			String submitImg2 = "";
+			String submitImg3 = "";
+			this.sqlmgr = new SQLManager();
+			String sql = "insert into pf_homeworkSubmit (idHomeworkDetail, idUser, submitImg1, submitImg2, submitImg3, status, gmtCreate) values (?, ?, ? ,? ,?, ?, ?);";
+			if (this.Req.getString("submitImg1") != null) {
+				submitImg1 = this.Req.getString("submitImg1");
+			}
+			if (this.Req.getString("submitImg2") != null) {
+				submitImg1 = this.Req.getString("submitImg2");
+			}
+			if (this.Req.getString("submitImg3") != null) {
+				submitImg1 = this.Req.getString("submitImg3");
+			}
+
+			this.sqlmgr.prepare(sql);
+			try {
+				this.sqlmgr.preparedStmt.setInt(1, idHomeworkDetail);
+				this.sqlmgr.preparedStmt.setInt(2, idUser);
+				this.sqlmgr.preparedStmt.setString(3, submitImg1);
+				this.sqlmgr.preparedStmt.setString(4, submitImg2);
+				this.sqlmgr.preparedStmt.setString(5, submitImg3);
+				this.sqlmgr.preparedStmt.setInt(6, 1);
+				this.sqlmgr.preparedStmt.setLong(7, System.currentTimeMillis() / 1000);
+
+				this.sqlmgr.preparedStmt.execute();
+				this.res.put("errCode", 0);
+				this.res.put("msg", "submit success!");
+			} catch (SQLException e) {
+				// TODO 自动生成的 catch 块
+				e.printStackTrace();
+				this.res.put("msg", e.toString());
+			}
+			this.out.print(new JSONObject(this.res).toString(2));
+
+		}
+
+	}
+
+	/**
+	 * @author Mizuki 老师获得班级学生的作业提交情况
+	 */
+	public void getStuHomeworkList() {
+		int idCourse = this.Req.getInt("idCourse");
+		String sql = "select * from pf_courseAdd where idCourse = ?;";
+		this.sqlmgr = new SQLManager();
+		
+		this.sqlmgr.prepare(sql);
+		try {
+			this.sqlmgr.preparedStmt.setInt(1, idCourse);
+			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
+			while(rs.next()) {
+				int idUser = rs.getInt("idUser");
+				
+			}
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+			this.res.put("msg", e.toString());
+		}
 	}
 
 }
