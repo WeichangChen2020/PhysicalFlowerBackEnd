@@ -1392,10 +1392,10 @@ public class WxHandler {
 	 * @author Mizuki 老师获得班级学生的作业提交情况
 	 */
 	public void getStuHomeworkList() {
+		int check = 0;
 		int idHomework = this.Req.getInt("idHomework");
 		this.sqlmgr = new SQLManager();
-		String sql = "select * from pf_homework where idHomework = ? and status = 1;";
-		int count = 0;
+		String sql = "select * from pf_homework where idHomework = ? and status = 1";
 
 		this.sqlmgr.prepare(sql);
 		try {
@@ -1407,37 +1407,31 @@ public class WxHandler {
 				this.sqlmgr.prepare(Sql);
 				this.sqlmgr.preparedStmt.setInt(1, idCourse);
 				ResultSet Rs = this.sqlmgr.preparedStmt.executeQuery();
+				List<HashMap> homeworkInfo = new ArrayList<HashMap>();
 				while (Rs.next()) {
-					List<HashMap> stuHomework = new ArrayList<HashMap>();
-					HashMap user = new HashMap<>();
-					count = count + 1;
-					int check = 0;
-					user.put("name", Rs.getString("name"));
-					user.put("stunum", Rs.getString("stunum"));
-					user.put("check", check);
+					HashMap Info = new HashMap<>();
 					int idUser = Rs.getInt("idUser");
-//					stuHomework.add(user);
-					String SQL = "select * from physicalFlower.pf_homeworkDetail, physicalFlower.pf_homeworkSubmit where pf_homeworkDetail.idHomeworkDetail = pf_homeworkSubmit.idHomeworkDetail and pf_homeworkDetail.idHomework = ? and pf_homeworkSubmit.idUser = ? and pf_homeworkDetail.status = 1 and pf_homeworkSubmit.`status`= 1;";
+					Info.put("idUser", idUser);
+					Info.put("stunum", Rs.getString("stunum"));
+					Info.put("name", Rs.getString("name"));
+
+					String SQL = "SELECT * FROM physicalFlower.pf_homeworkDetail, physicalFlower.pf_homeworkSubmit WHERE pf_homeworkDetail.idHomeworkDetail = pf_homeworkSubmit.idHomeworkDetail AND pf_homeworkDetail.idHomework = ? AND pf_homeworkSubmit.idUser = ?;";
 					this.sqlmgr.prepare(SQL);
 					this.sqlmgr.preparedStmt.setInt(1, idHomework);
 					this.sqlmgr.preparedStmt.setInt(2, idUser);
-					ResultSet RS = this.sqlmgr.preparedStmt.executeQuery();
-					while (RS.next()) {
+					ResultSet rS = this.sqlmgr.preparedStmt.executeQuery();
+					if (rS.next()) {
 						check = 1;
-						HashMap<Object, Object> Info = new HashMap<>();
-						Info.put("idQues", RS.getInt("idQues"));
-						Info.put("submitImg1", RS.getString("submitImg1"));
-						Info.put("submitImg2", RS.getString("submitImg2"));
-						Info.put("submitImg3", RS.getString("submitImg3"));
-						stuHomework.add(Info);
+					} else {
+						check = 0;
 					}
-					user.put("check", check);
-					stuHomework.add(user);
-					this.res.put(String.valueOf(count), stuHomework);
+					Info.put("check", check);
+					homeworkInfo.add(Info);
 				}
+				this.res.put("homeworkInfo", homeworkInfo);
 			} else {
 				this.res.put("errCode", 4003);
-				this.res.put("msg", "sorry, no homework!");
+				this.res.put("msg", "please set homework firse!");
 			}
 		} catch (SQLException e) {
 			// TODO 自动生成的 catch 块
@@ -1446,5 +1440,96 @@ public class WxHandler {
 		}
 		this.out.print(new JSONObject(this.res).toString(2));
 	}
+
+	/**
+	 * @author Mizuki 获得已经提交作业的学生的作业的详细情况
+	 */
+	public void getStuHomeworkInfo() {
+		int idUser = this.Req.getInt("idUser");
+		int idHomework = this.Req.getInt("idHomework");
+		this.sqlmgr = new SQLManager();
+		String sql = "SELECT * FROM physicalFlower.pf_homeworkDetail, physicalFlower.pf_homeworkSubmit WHERE pf_homeworkDetail.idHomeworkDetail = pf_homeworkSubmit.idHomeworkDetail AND pf_homeworkDetail.idHomework = ? AND pf_homeworkSubmit.idUser = ?;";
+	
+		this.sqlmgr.prepare(sql);
+		try {
+			this.sqlmgr.preparedStmt.setInt(1, idHomework);
+			this.sqlmgr.preparedStmt.setInt(2, idUser);
+			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
+			List<HashMap> homeworkInfo = new ArrayList<HashMap>();
+			while(rs.next()) {
+				HashMap Info = new HashMap<>();
+				Info.put("idQues", rs.getInt("idQues"));
+				Info.put("submitImg1", rs.getString("submitImg1"));
+				Info.put("submitImg2", rs.getString("submitImg2"));
+				Info.put("submitImg3", rs.getString("submitImg3"));
+				homeworkInfo.add(Info);
+			}
+			this.res.put("homeworkInfo", homeworkInfo);
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+			this.res.put("msg", e.toString());
+		}
+		this.out.print(new JSONObject(this.res).toString(2));
+	}
+
+	/**
+	 * @author Mizuki 老师获得班级学生的作业提交情况
+	 */
+//	public void getStuHomeworkList() {
+//		int idHomework = this.Req.getInt("idHomework");
+//		this.sqlmgr = new SQLManager();
+//		String sql = "select * from pf_homework where idHomework = ? and status = 1;";
+//		int count = 0;
+//
+//		this.sqlmgr.prepare(sql);
+//		try {
+//			this.sqlmgr.preparedStmt.setInt(1, idHomework);
+//			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
+//			if (rs.next()) {
+//				int idCourse = rs.getInt("idCourse");
+//				String Sql = "SELECT * FROM physicalFlower.pf_courseAdd,physicalFlower.pf_user where pf_user.idUser=pf_courseAdd.idUser and pf_user.status =1 and pf_courseAdd.`status`=1 and idCourse = ?;";
+//				this.sqlmgr.prepare(Sql);
+//				this.sqlmgr.preparedStmt.setInt(1, idCourse);
+//				ResultSet Rs = this.sqlmgr.preparedStmt.executeQuery();
+//				while (Rs.next()) {
+//					List<HashMap> stuHomework = new ArrayList<HashMap>();
+//					HashMap user = new HashMap<>();
+//					count = count + 1;
+//					int check = 0;
+//					user.put("name", Rs.getString("name"));
+//					user.put("stunum", Rs.getString("stunum"));
+//					user.put("check", check);
+//					int idUser = Rs.getInt("idUser");
+////					stuHomework.add(user);
+//					String SQL = "select * from physicalFlower.pf_homeworkDetail, physicalFlower.pf_homeworkSubmit where pf_homeworkDetail.idHomeworkDetail = pf_homeworkSubmit.idHomeworkDetail and pf_homeworkDetail.idHomework = ? and pf_homeworkSubmit.idUser = ? and pf_homeworkDetail.status = 1 and pf_homeworkSubmit.`status`= 1;";
+//					this.sqlmgr.prepare(SQL);
+//					this.sqlmgr.preparedStmt.setInt(1, idHomework);
+//					this.sqlmgr.preparedStmt.setInt(2, idUser);
+//					ResultSet RS = this.sqlmgr.preparedStmt.executeQuery();
+//					while (RS.next()) {
+//						check = 1;
+//						HashMap<Object, Object> Info = new HashMap<>();
+//						Info.put("idQues", RS.getInt("idQues"));
+//						Info.put("submitImg1", RS.getString("submitImg1"));
+//						Info.put("submitImg2", RS.getString("submitImg2"));
+//						Info.put("submitImg3", RS.getString("submitImg3"));
+//						stuHomework.add(Info);
+//					}
+//					user.put("check", check);
+//					stuHomework.add(user);
+//					this.res.put(String.valueOf(count), stuHomework);
+//				}
+//			} else {
+//				this.res.put("errCode", 4003);
+//				this.res.put("msg", "sorry, no homework!");
+//			}
+//		} catch (SQLException e) {
+//			// TODO 自动生成的 catch 块
+//			e.printStackTrace();
+//			this.res.put("msg", e.toString());
+//		}
+//		this.out.print(new JSONObject(this.res).toString(2));
+//	}
 
 }
