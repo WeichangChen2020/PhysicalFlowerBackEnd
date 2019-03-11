@@ -1193,11 +1193,11 @@ public class WxHandler {
 		Long gmtEnd = this.Req.getLong("gmtEnd");
 		Long gmtStart = System.currentTimeMillis() / 1000;
 		int length = this.Req.getInt("length");
+		System.out.println(gmtStart);
 
-		if (gmtStart <= gmtEnd) {
+		if (gmtStart >= gmtEnd) {
 			this.res.put("errCode", 4003);
 			this.res.put("msg", "sorry, please reset time!");
-			return;
 		} else {
 			String sql = "insert into pf_homework (idCourse, gmtStart, gmtEnd, status, gmtCreate) values (?, ?, ?, ?, ?)";
 			this.sqlmgr = new SQLManager();
@@ -1218,8 +1218,9 @@ public class WxHandler {
 					this.res.put("idHomework", Rs.getInt(1));
 					int idHomework = Rs.getInt(1);
 					JSONObject idQues = this.Req.getJSONObject("idQues");
-					String Sql = "insert into pf_homeworkDetail (idHomework, idQues, status, gmtCreate) values (?, ?, ?, ?)";
+//					String Sql = "insert into pf_homeworkDetail (idHomework, idQues, status, gmtCreate) values (?, ?, ?, ?)";
 					for (int i = 0; i < length; i++) {
+						String Sql = "insert into pf_homeworkDetail (idHomework, idQues, status, gmtCreate) values (?, ?, ?, ?)";
 						this.sqlmgr.prepare(Sql);
 						this.sqlmgr.preparedStmt.setInt(1, idHomework);
 						this.sqlmgr.preparedStmt.setInt(2, idQues.getInt(String.valueOf(i)));
@@ -1247,7 +1248,7 @@ public class WxHandler {
 		int count = 0;
 		int idHomework = this.Req.getInt("idHomework");
 		this.sqlmgr = new SQLManager();
-		String sql = "select * from physicalFlower.pf_homeworkDetail,physicalFlower.pf_homework where pf_homework.idHomework = pf_homeworkDetail.idHomework and pf_homeworkDetail.idHomework = ? and pf_homeworkDetail.status = 1 and pf_homework.status = 1;";
+		String sql = "select * from physicalFlower.pf_homeworkDetail,physicalFlower.pf_homework, physicalFlower.pf_questionBank where pf_questionBank.idQues = pf_homeworkDetail.idQues and pf_homework.idHomework = pf_homeworkDetail.idHomework and pf_homeworkDetail.idHomework = ? and pf_homeworkDetail.status = 1 and pf_homework.status = 1;";
 
 		this.sqlmgr.prepare(sql);
 		try {
@@ -1258,6 +1259,7 @@ public class WxHandler {
 			while (rs.next()) {
 				count = count + 1;
 				HashMap<Object, Object> Info = new HashMap<>();
+				Info.put("img", imgUrl + rs.getString("img"));
 				Info.put("idQues", rs.getInt("idQues"));
 				Info.put("gmtEnd", rs.getLong("gmtEnd"));
 				Info.put("gmtStart", rs.getLong("gmtStart"));
@@ -1341,28 +1343,34 @@ public class WxHandler {
 	 * @author Mizuki 提交作业
 	 */
 	public void submitHomework() {
-		if (this.session.getAttribute("idUser") == null) {
-			this.res.put("errCode", 4002);
-			this.res.put("msg", "Login required.");
-			this.out.println(new JSONObject(this.res).toString(2));
-			return;
-		} else {
-			int idUser = Integer.parseInt(this.session.getAttribute("idUser").toString());
-
-			int idHomeworkDetail = this.Req.getInt("idHomeworkDetail");
+//		if (this.session.getAttribute("idUser") == null) {
+//			this.res.put("errCode", 4002);
+//			this.res.put("msg", "Login required.");
+//			this.out.println(new JSONObject(this.res).toString(2));
+//			return;
+//		} else {
+		int idUser = 9;
+//			int idUser = Integer.parseInt(this.session.getAttribute("idUser").toString());
 			String submitImg1 = "";
 			String submitImg2 = "";
 			String submitImg3 = "";
+			int idHomeworkDetail = this.Req.getInt("idHomeworkDetail");
 			this.sqlmgr = new SQLManager();
 			String sql = "insert into pf_homeworkSubmit (idHomeworkDetail, idUser, submitImg1, submitImg2, submitImg3, status, gmtCreate) values (?, ?, ? ,? ,?, ?, ?);";
-			if (this.Req.getString("submitImg1") != null) {
+			if (this.Req.getString("submitImg1").isEmpty()) {
+				submitImg1 = "";
+			} else {
 				submitImg1 = this.Req.getString("submitImg1");
 			}
-			if (this.Req.getString("submitImg2") != null) {
-				submitImg1 = this.Req.getString("submitImg2");
+			if (this.Req.getString("submitImg2").isEmpty()) {
+				submitImg2 = "";
+			} else {
+				submitImg2 = this.Req.getString("submitImg2");
 			}
-			if (this.Req.getString("submitImg3") != null) {
-				submitImg1 = this.Req.getString("submitImg3");
+			if (this.Req.getString("submitImg3").isEmpty()) {
+				submitImg3 = " ";
+			} else {
+				submitImg3 = this.Req.getString("submitImg3");
 			}
 
 			this.sqlmgr.prepare(sql);
@@ -1386,16 +1394,15 @@ public class WxHandler {
 			this.out.print(new JSONObject(this.res).toString(2));
 		}
 
-	}
+//	}
 
 	/**
 	 * @author Mizuki 老师获得班级学生的作业提交情况
 	 */
 	public void getStuHomeworkList() {
-		int check = 0;
 		int idHomework = this.Req.getInt("idHomework");
 		this.sqlmgr = new SQLManager();
-		String sql = "select * from pf_homework where idHomework = ? and status = 1";
+		String sql = "select * from pf_homework where idHomework = ? and status = 1;";
 
 		this.sqlmgr.prepare(sql);
 		try {
@@ -1403,35 +1410,37 @@ public class WxHandler {
 			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
 			if (rs.next()) {
 				int idCourse = rs.getInt("idCourse");
-				String Sql = "SELECT * FROM physicalFlower.pf_courseAdd,physicalFlower.pf_user where pf_user.idUser=pf_courseAdd.idUser and pf_user.status =1 and pf_courseAdd.`status`=1 and idCourse = ?;";
+				String Sql = "select * from physicalFlower.pf_courseAdd,physicalFlower.pf_user where pf_user.idUser = pf_courseAdd.idUser and pf_courseAdd.idCourse = ? and pf_user.`status`=1 and pf_courseAdd.`status`=1;";
 				this.sqlmgr.prepare(Sql);
 				this.sqlmgr.preparedStmt.setInt(1, idCourse);
 				ResultSet Rs = this.sqlmgr.preparedStmt.executeQuery();
 				List<HashMap> homeworkInfo = new ArrayList<HashMap>();
 				while (Rs.next()) {
-					HashMap Info = new HashMap<>();
+					int check = 0;
 					int idUser = Rs.getInt("idUser");
-					Info.put("idUser", idUser);
-					Info.put("stunum", Rs.getString("stunum"));
+					HashMap Info = new HashMap<>();
 					Info.put("name", Rs.getString("name"));
-
-					String SQL = "SELECT * FROM physicalFlower.pf_homeworkDetail, physicalFlower.pf_homeworkSubmit WHERE pf_homeworkDetail.idHomeworkDetail = pf_homeworkSubmit.idHomeworkDetail AND pf_homeworkDetail.idHomework = ? AND pf_homeworkSubmit.idUser = ?;";
+					Info.put("idUser", Rs.getInt("idUser"));
+					Info.put("stunum", Rs.getString("stunum"));
+					String SQL = "SELECT * FROM physicalFlower.pf_homeworkDetail, physicalFlower.pf_homeworkSubmit where pf_homeworkDetail.idHomeworkDetail = pf_homeworkSubmit.idHomeworkDetail and pf_homeworkDetail.idHomework = ? AND pf_homeworkSubmit.idUser = ? AND pf_homeworkDetail.`status`=1 and pf_homeworkSubmit.`status`=1;";
 					this.sqlmgr.prepare(SQL);
 					this.sqlmgr.preparedStmt.setInt(1, idHomework);
 					this.sqlmgr.preparedStmt.setInt(2, idUser);
-					ResultSet rS = this.sqlmgr.preparedStmt.executeQuery();
-					if (rS.next()) {
-						check = 1;
-					} else {
-						check = 0;
+					ResultSet RS = this.sqlmgr.preparedStmt.executeQuery();
+					while (RS.next()) {
+						if (RS.getString("submitImg1").isEmpty() && RS.getString("submitImg2").isEmpty()
+								&& RS.getString("submitImg3").isEmpty()) {
+							check = 0;
+						} else {
+							check = 1;
+						}
 					}
 					Info.put("check", check);
 					homeworkInfo.add(Info);
 				}
 				this.res.put("homeworkInfo", homeworkInfo);
-			} else {
-				this.res.put("errCode", 4003);
-				this.res.put("msg", "please set homework firse!");
+				this.res.put("errCode", 0);
+				this.res.put("msg", "get list success!");
 			}
 		} catch (SQLException e) {
 			// TODO 自动生成的 catch 块
@@ -1449,14 +1458,14 @@ public class WxHandler {
 		int idHomework = this.Req.getInt("idHomework");
 		this.sqlmgr = new SQLManager();
 		String sql = "SELECT * FROM physicalFlower.pf_homeworkDetail, physicalFlower.pf_homeworkSubmit WHERE pf_homeworkDetail.idHomeworkDetail = pf_homeworkSubmit.idHomeworkDetail AND pf_homeworkDetail.idHomework = ? AND pf_homeworkSubmit.idUser = ?;";
-	
+
 		this.sqlmgr.prepare(sql);
 		try {
 			this.sqlmgr.preparedStmt.setInt(1, idHomework);
 			this.sqlmgr.preparedStmt.setInt(2, idUser);
 			ResultSet rs = this.sqlmgr.preparedStmt.executeQuery();
 			List<HashMap> homeworkInfo = new ArrayList<HashMap>();
-			while(rs.next()) {
+			while (rs.next()) {
 				HashMap Info = new HashMap<>();
 				Info.put("idQues", rs.getInt("idQues"));
 				Info.put("submitImg1", rs.getString("submitImg1"));
